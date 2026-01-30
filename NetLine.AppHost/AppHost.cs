@@ -1,16 +1,14 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin(); // opcjonalnie, przydatne do podgl¹du
+    .WithPgAdmin();
 
-var deviceDb = postgres.AddDatabase("deviceinfo"); // to jest nazwa bazy
-
-var api = builder.AddProject<Projects.NetLine_ApiService>("apiservice")
-    .WithReference(deviceDb);
+var deviceDb = postgres.AddDatabase("deviceinfo");
 
 var cache = builder.AddRedis("cache");
 
 var apiService = builder.AddProject<Projects.NetLine_ApiService>("apiservice")
+    .WithReference(deviceDb)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.NetLine_Web>("webfrontend")

@@ -1,7 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+using NetLine.ApiService.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+
+// Aspire wstrzyknie connection string do "deviceinfo"
+// FIX: Use AddDbContext on builder.Services instead of AddNpgsqlDbContext on builder
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("deviceinfo")));
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
