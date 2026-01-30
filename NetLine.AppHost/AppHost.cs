@@ -9,6 +9,7 @@ var cache = builder.AddRedis("cache");
 
 var apiService = builder.AddProject<Projects.NetLine_ApiService>("apiservice")
     .WithReference(deviceDb)
+    .WaitFor(deviceDb)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.NetLine_Web>("webfrontend")

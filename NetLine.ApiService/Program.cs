@@ -7,9 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Aspire wstrzyknie connection string do "deviceinfo"
-// FIX: Use AddDbContext on builder.Services instead of AddNpgsqlDbContext on builder
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("deviceinfo")));
+builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
@@ -46,6 +44,27 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast");
 
 app.MapDefaultEndpoints();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+        Console.WriteLine("Sukces: Migracja bazy danych zakoñczona pomyœlnie!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"B³¹d podczas migracji: {ex.Message}");
+    }
+}
 
 app.Run();
 
