@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NetLine.ApiService.Data;
+using NetLine.ApiService.Models;
+using System.Net.NetworkInformation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +68,39 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"B³¹d podczas migracji: {ex.Message}");
     }
 }
+
+// Endpoint do pobierania listy
+app.MapGet("/devices", async (AppDbContext db) => await db.DevicesBasicInfo.ToListAsync());
+
+// Endpoint do skanowania (uruchamia ping i zapisuje do bazy)
+app.MapGet("/scan/{ipAddress}", async (string ipAddress, AppDbContext db) =>
+{
+    using var ping = new Ping();
+    try
+    {
+        // Wysy³amy sygna³ do urz¹dzenia
+        var reply = await ping.SendPingAsync(ipAddress, 1000);
+        var isOnline = (reply.Status == IPStatus.Success);
+
+        // Tworzymy obiekt urz¹dzenia do zapisu
+        var device = new DeviceBasicInfo
+        {
+            IpAddress = ipAddress,
+            Status = isOnline ? "Online" : "Offline",
+            DeviceType = "Zeskanowane",
+            UniqueIdOrName = $"Skan-{DateTime.Now:HHmm}-{ipAddress}"
+        };
+
+        db.DevicesBasicInfo.Add(device);
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new { Status = device.Status, Info = "Zapisano w bazie!" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"B³¹d skanowania: {ex.Message}");
+    }
+});
 
 app.Run();
 

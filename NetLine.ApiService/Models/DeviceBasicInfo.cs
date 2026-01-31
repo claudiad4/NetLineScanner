@@ -19,4 +19,8 @@ public class DeviceBasicInfo
     [Required]
     [MaxLength(100)]
     public string UniqueIdOrName { get; set; } = default!; // np. "RTR-01" albo "CoreSwitch"
+
+    [Required]
+    [MaxLength(50)]
+    public string IpAddress { get; set; } = default!;
 }
