@@ -1,142 +1,263 @@
 using Microsoft.EntityFrameworkCore;
+
 using NetLine.ApiService.Data;
+
 using NetLine.ApiService.Models;
+
 using System.Net;
+
 using System.Net.NetworkInformation;
+
+using System.Text.RegularExpressions;
+
+using System.Diagnostics;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- KONFIGURACJA US£UG ---
+
+
+// --- KONFIGURACJA ---
+
 builder.AddServiceDefaults();
-builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo"); //
-builder.Services.AddProblemDetails();
+
+builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
+
 builder.Services.AddOpenApi();
+
+builder.Services.AddHttpClient(); // Potrzebne do sprawdzania producentów w sieci
+
+
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
-// --- POGODA (Zgodnie z proœb¹ zostawiona bez zmian) ---
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
+// --- INICJALIZACJA BAZY ---
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-// --- BEZPIECZNA INICJALIZACJA BAZY (Tylko raz!) ---
 using (var scope = app.Services.CreateScope())
+
 {
-    var services = scope.ServiceProvider;
+
     try
+
     {
-        var context = services.GetRequiredService<AppDbContext>();
-        // MigrateAsync na³o¿y brakuj¹ce tabele bez przerywania programu
+
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         await context.Database.MigrateAsync();
-        Console.WriteLine("Sukces: Baza danych zosta³a zsynchronizowana!");
+
     }
-    catch (Exception ex)
-    {
-        // Jeœli baza w Dockerze jeszcze wstaje, program wypisze b³¹d zamiast siê zawiesiæ
-        Console.WriteLine($"Oczekiwanie na bazê danych: {ex.Message}");
-    }
+
+    catch { /* Baza pewnie ju¿ dzia³a */ }
+
 }
 
-// --- ENDPOINTY TWOJEGO SKANERA ---
 
-app.MapGet("/", () => "API NetLine dzia³a. Wywo³aj /scan-my-home aby rozpocz¹æ.");
 
-// Endpoint do pobierania listy z bazy (dla Twojej strony Razor)
+// --- ENDPOINTY ---
+
+
+
+app.MapGet("/", () => "API NetLine dzia³a. Wywo³aj /scan-my-home");
+
+
+
 app.MapGet("/devices", async (AppDbContext db) => await db.DevicesBasicInfo.ToListAsync());
 
-// INTELIGENTNY SKANER (Sam znajduje IP i typ urz¹dzenia)
-app.MapGet("/scan-my-home", async (AppDbContext db) =>
+
+
+app.MapGet("/scan-my-home", async (AppDbContext db, HttpClient client) =>
+
 {
-    // 1. Automatyczne wykrywanie prefixu Twojej sieci
-    var host = await Dns.GetHostEntryAsync(Dns.GetHostName());
-    var localIp = host.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?.ToString();
 
-    if (string.IsNullOrEmpty(localIp)) return Results.BadRequest("B³¹d: Nie wykryto adresu IP w sieci lokalnej.");
+    var hostInfo = await Dns.GetHostEntryAsync(Dns.GetHostName());
 
-    // Tworzy np. "192.168.1" z Twojego "192.168.1.15"
+    var localIp = hostInfo.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?.ToString();
+
+    if (string.IsNullOrEmpty(localIp)) return Results.Problem("Nie wykryto IP.");
+
+
+
     string networkPrefix = localIp.Substring(0, localIp.LastIndexOf('.'));
+
     int foundCount = 0;
-    using var ping = new Ping();
 
-    // Skanujemy zakres 1-20 (mo¿esz zwiêkszyæ do 254)
-    for (int i = 1; i <= 20; i++)
+
+
+    for (int i = 1; i <= 30; i++)
+
     {
+
         string testIp = $"{networkPrefix}.{i}";
+
+        using var ping = new Ping();
+
         try
+
         {
-            var reply = await ping.SendPingAsync(testIp, 200);
+
+            var reply = await ping.SendPingAsync(testIp, 100);
+
             if (reply.Status == IPStatus.Success)
+
             {
-                string deviceName;
+
+                // 1. Pobieramy MAC (¿eby zapytaæ o producenta)
+
+                string mac = "Unknown";
+
                 try
+
                 {
-                    var hostEntry = await Dns.GetHostEntryAsync(testIp);
-                    deviceName = hostEntry.HostName;
+
+                    var psi = new ProcessStartInfo("arp", "-a " + testIp) { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
+
+                    using var process = Process.Start(psi);
+
+                    string output = process.StandardOutput.ReadToEnd();
+
+                    var match = Regex.Match(output, @"([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})");
+
+                    if (match.Success) mac = match.Value.ToUpper().Replace("-", ":");
+
                 }
-                catch
+
+                catch { }
+
+
+
+                // 2. Odpytujemy API o producenta (jeœli znamy MAC)
+
+                string manufacturer = "Nieznane";
+
+                if (mac != "Unknown")
+
                 {
-                    deviceName = $"Urz¹dzenie-{testIp}";
+
+                    try
+
+                    {
+
+                        var response = await client.GetAsync($"https://api.macvendors.com/{mac}");
+
+                        if (response.IsSuccessStatusCode) manufacturer = await response.Content.ReadAsStringAsync();
+
+                    }
+
+                    catch { }
+
                 }
 
-                // 2. Rozpoznawanie typu urz¹dzenia (Device type)
-                string type = "Stacja robocza"; // Domyœlny
-                string nameLower = deviceName.ToLower();
 
-                if (nameLower.Contains("samsung") || nameLower.Contains("iphone") || nameLower.Contains("phone") || nameLower.Contains("android"))
-                    type = "Telefon";
-                else if (nameLower.Contains("desktop") || nameLower.Contains("pc") || nameLower.Contains("laptop"))
-                    type = "Komputer";
-                else if (nameLower.Contains("switch") || nameLower.Contains("router") || nameLower.Contains("tplink") || nameLower.Contains("bridge"))
-                    type = "Urz¹dzenie sieciowe";
 
-                var device = new DeviceBasicInfo
+                // 3. Próba pobrania nazwy z DNS (np. laptop-home)
+
+                string dnsName = "";
+
+                try
+
                 {
-                    IpAddress = testIp,
-                    Status = "Online",
-                    DeviceType = type,
-                    UniqueIdOrName = deviceName
-                };
 
-                db.DevicesBasicInfo.Add(device);
-                foundCount++;
+                    var entry = await Dns.GetHostEntryAsync(testIp);
+
+                    dnsName = entry.HostName.Split('.')[0].ToUpper();
+
+                }
+
+                catch { }
+
+
+
+                // 4. £¹czymy to w jedn¹ sensown¹ nazwê dla u¿ytkownika
+
+                // Priorytet: Nazwa z DNS > Producent > IP
+
+                string finalDisplayName = !string.IsNullOrEmpty(dnsName) ? dnsName : (manufacturer != "Nieznane" ? manufacturer : $"Urz¹dzenie-{testIp.Split('.').Last()}");
+
+
+
+                // 5. Okreœlamy typ (do tabeli)
+
+                string type = "Komputer";
+
+                string check = (finalDisplayName + manufacturer).ToLower();
+
+                if (check.Contains("samsung") || check.Contains("phone") || check.Contains("oppo") || check.Contains("apple")) type = "Telefon";
+
+                else if (check.Contains("tv") || check.Contains("lg") || check.Contains("sony")) type = "Telewizor";
+
+                else if (testIp.EndsWith(".1") || check.Contains("router") || check.Contains("tp-link")) type = "Router";
+
+
+
+                // 6. ZAPIS DO BAZY (bez nowych pól, u¿ywamy tych co masz)
+
+                var existing = await db.DevicesBasicInfo.FirstOrDefaultAsync(d => d.IpAddress == testIp);
+
+                if (existing == null)
+
+                {
+
+                    db.DevicesBasicInfo.Add(new DeviceBasicInfo
+
+                    {
+
+                        IpAddress = testIp,
+
+                        UniqueIdOrName = finalDisplayName, // Tu wpadnie np. "OPPO" albo "LG"
+
+                        DeviceType = type,
+
+                        Status = "Online"
+
+                    });
+
+                    foundCount++;
+
+                }
+
+                else
+
+                {
+
+                    existing.UniqueIdOrName = finalDisplayName;
+
+                    existing.DeviceType = type;
+
+                    existing.Status = "Online";
+
+                }
+
+
+
+                // Czekamy chwilê, ¿eby nie zablokowali nas za zbyt szybkie pytania o MAC
+
+                await Task.Delay(500);
+
             }
+
         }
+
         catch { }
+
     }
 
+
+
     await db.SaveChangesAsync();
-    return Results.Ok(new
-    {
-        Message = $"Skanowanie zakoñczone! Znaleziono {foundCount} urz¹dzeñ.",
-        Network = $"{networkPrefix}.0",
-        MyIp = localIp
-    });
+
+    return Results.Ok($"Skanowanie zakoñczone. Znaleziono {foundCount} urz¹dzeñ.");
+
 });
 
+
+
 app.MapDefaultEndpoints();
+
 app.Run();
 
-// Model pogody
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+
+
+record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary);
