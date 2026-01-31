@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 using NetLine.ApiService.Data;
 using NetLine.ApiService.Models;
 using System.Net;
@@ -7,21 +6,14 @@ using System.Net.NetworkInformation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
+// --- KONFIGURACJA US£UG ---
 builder.AddServiceDefaults();
-
-// Aspire wstrzyknie connection string do "deviceinfo"
-builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
-
-// Add services to the container.
+builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo"); //
 builder.Services.AddProblemDetails();
-
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -29,9 +21,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// --- POGODA (Zgodnie z proœb¹ zostawiona bez zmian) ---
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
-
-app.MapGet("/", () => "API service is running. Navigate to /weatherforecast to see sample data.");
 
 app.MapGet("/weatherforecast", () =>
 {
@@ -47,68 +38,46 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-app.MapDefaultEndpoints();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
-
+// --- BEZPIECZNA INICJALIZACJA BAZY (Tylko raz!) ---
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-        Console.WriteLine("Sukces: Migracja bazy danych zakoñczona pomyœlnie!");
+        // MigrateAsync na³o¿y brakuj¹ce tabele bez przerywania programu
+        await context.Database.MigrateAsync();
+        Console.WriteLine("Sukces: Baza danych zosta³a zsynchronizowana!");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"B³¹d podczas migracji: {ex.Message}");
+        // Jeœli baza w Dockerze jeszcze wstaje, program wypisze b³¹d zamiast siê zawiesiæ
+        Console.WriteLine($"Oczekiwanie na bazê danych: {ex.Message}");
     }
 }
 
-// Endpoint do pobierania listy
+// --- ENDPOINTY TWOJEGO SKANERA ---
+
+app.MapGet("/", () => "API NetLine dzia³a. Wywo³aj /scan-my-home aby rozpocz¹æ.");
+
+// Endpoint do pobierania listy z bazy (dla Twojej strony Razor)
 app.MapGet("/devices", async (AppDbContext db) => await db.DevicesBasicInfo.ToListAsync());
 
-// Endpoint do skanowania (uruchamia ping i zapisuje do bazy)
-app.MapGet("/scan/{ipAddress}", async (string ipAddress, AppDbContext db) =>
-{
-    using var ping = new Ping();
-    try
-    {
-        // Wysy³amy sygna³ do urz¹dzenia
-        var reply = await ping.SendPingAsync(ipAddress, 1000);
-        var isOnline = (reply.Status == IPStatus.Success);
-
-        // Tworzymy obiekt urz¹dzenia do zapisu
-        var device = new DeviceBasicInfo
-        {
-            IpAddress = ipAddress,
-            Status = isOnline ? "Online" : "Offline",
-            DeviceType = "Zeskanowane",
-            UniqueIdOrName = $"Skan-{DateTime.Now:HHmm}-{ipAddress}"
-        };
-
-        db.DevicesBasicInfo.Add(device);
-        await db.SaveChangesAsync();
-
-        return Results.Ok(new { Status = device.Status, Info = "Zapisano w bazie!" });
-    }
-    catch (Exception ex)
-    {
-        return Results.BadRequest($"B³¹d skanowania: {ex.Message}");
-    }
-});
-
+// INTELIGENTNY SKANER (Sam znajduje IP i typ urz¹dzenia)
 app.MapGet("/scan-my-home", async (AppDbContext db) =>
 {
-    string networkPrefix = "192.168.1";
+    // 1. Automatyczne wykrywanie prefixu Twojej sieci
+    var host = await Dns.GetHostEntryAsync(Dns.GetHostName());
+    var localIp = host.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?.ToString();
+
+    if (string.IsNullOrEmpty(localIp)) return Results.BadRequest("B³¹d: Nie wykryto adresu IP w sieci lokalnej.");
+
+    // Tworzy np. "192.168.1" z Twojego "192.168.1.15"
+    string networkPrefix = localIp.Substring(0, localIp.LastIndexOf('.'));
     int foundCount = 0;
     using var ping = new Ping();
 
+    // Skanujemy zakres 1-20 (mo¿esz zwiêkszyæ do 254)
     for (int i = 1; i <= 20; i++)
     {
         string testIp = $"{networkPrefix}.{i}";
@@ -117,7 +86,6 @@ app.MapGet("/scan-my-home", async (AppDbContext db) =>
             var reply = await ping.SendPingAsync(testIp, 200);
             if (reply.Status == IPStatus.Success)
             {
-                // PRÓBA POBRANIA NAZWY URZ¥DZENIA
                 string deviceName;
                 try
                 {
@@ -129,25 +97,45 @@ app.MapGet("/scan-my-home", async (AppDbContext db) =>
                     deviceName = $"Urz¹dzenie-{testIp}";
                 }
 
+                // 2. Rozpoznawanie typu urz¹dzenia (Device type)
+                string type = "Stacja robocza"; // Domyœlny
+                string nameLower = deviceName.ToLower();
+
+                if (nameLower.Contains("samsung") || nameLower.Contains("iphone") || nameLower.Contains("phone") || nameLower.Contains("android"))
+                    type = "Telefon";
+                else if (nameLower.Contains("desktop") || nameLower.Contains("pc") || nameLower.Contains("laptop"))
+                    type = "Komputer";
+                else if (nameLower.Contains("switch") || nameLower.Contains("router") || nameLower.Contains("tplink") || nameLower.Contains("bridge"))
+                    type = "Urz¹dzenie sieciowe";
+
                 var device = new DeviceBasicInfo
                 {
                     IpAddress = testIp,
                     Status = "Online",
-                    DeviceType = "Wykryto automatycznie",
-                    UniqueIdOrName = deviceName // Tu trafi nazwa sieciowa!
+                    DeviceType = type,
+                    UniqueIdOrName = deviceName
                 };
+
                 db.DevicesBasicInfo.Add(device);
                 foundCount++;
             }
         }
         catch { }
     }
+
     await db.SaveChangesAsync();
-    return Results.Ok($"Skanowanie zakoñczone! Znaleziono {foundCount} urz¹dzeñ.");
+    return Results.Ok(new
+    {
+        Message = $"Skanowanie zakoñczone! Znaleziono {foundCount} urz¹dzeñ.",
+        Network = $"{networkPrefix}.0",
+        MyIp = localIp
+    });
 });
 
+app.MapDefaultEndpoints();
 app.Run();
 
+// Model pogody
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);

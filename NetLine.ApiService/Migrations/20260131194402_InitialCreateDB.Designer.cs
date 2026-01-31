@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetLine.ApiService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260131111727_DodanieKolumnyIp")]
-    partial class DodanieKolumnyIp
+    [Migration("20260131194402_InitialCreateDB")]
+    partial class InitialCreateDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
