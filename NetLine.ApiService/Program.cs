@@ -102,6 +102,44 @@ app.MapGet("/scan/{ipAddress}", async (string ipAddress, AppDbContext db) =>
     }
 });
 
+app.MapGet("/scan-my-home", async (AppDbContext db) =>
+{
+    // 1. Ustalasz bazê swojego adresu (zazwyczaj 192.168.1 lub 192.168.0)
+    string networkPrefix = "192.168.1";
+    int foundCount = 0;
+
+    using var ping = new Ping();
+
+    // 2. Pêtla sprawdzaj¹ca pierwsze 20 adresów (¿eby nie trwa³o to wiecznie)
+    for (int i = 1; i <= 20; i++)
+    {
+        string testIp = $"{networkPrefix}.{i}";
+
+        try
+        {
+            // Timeout ustawiamy na krótko (200ms), ¿eby skan szed³ szybko
+            var reply = await ping.SendPingAsync(testIp, 200);
+
+            if (reply.Status == IPStatus.Success)
+            {
+                var device = new DeviceBasicInfo
+                {
+                    IpAddress = testIp, // U¿ywam nazwy z Twojej bazy
+                    Status = "Online",
+                    DeviceType = "Wykryto automatycznie",
+                    UniqueIdOrName = $"Dom-{testIp}"
+                };
+                db.DevicesBasicInfo.Add(device);
+                foundCount++;
+            }
+        }
+        catch { /* Jeœli nie odpowiada, idziemy dalej */ }
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok($"Skanowanie zakoñczone! Znaleziono {foundCount} urz¹dzeñ w Twoim domu.");
+});
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
