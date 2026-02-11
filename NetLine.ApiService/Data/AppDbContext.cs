@@ -7,11 +7,11 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<DeviceBasicInfo> DevicesBasicInfo => Set<DeviceBasicInfo>();
+    public DbSet<DeviceInfo> DevicesInfo => Set<DeviceInfo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<DeviceBasicInfo>()
+        modelBuilder.Entity<DeviceInfo>()
             .HasIndex(d => d.UniqueIdOrName)
             .IsUnique(); // opcjonalnie: wymuś unikalność nazwy/ID
     }
