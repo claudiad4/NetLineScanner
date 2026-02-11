@@ -1,263 +1,140 @@
 using Microsoft.EntityFrameworkCore;
-
 using NetLine.ApiService.Data;
-
 using NetLine.ApiService.Models;
-
 using System.Net;
-
 using System.Net.NetworkInformation;
-
-using System.Text.RegularExpressions;
-
 using System.Diagnostics;
-
-
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-
 // --- KONFIGURACJA ---
-
 builder.AddServiceDefaults();
-
 builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
-
-builder.Services.AddOpenApi();
-
-builder.Services.AddHttpClient(); // Potrzebne do sprawdzania producentów w sieci
-
-
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-
-
-// --- INICJALIZACJA BAZY ---
-
+// --- INICJALIZACJA BAZY (Tworzy tabele, jeœli ich nie ma) ---
 using (var scope = app.Services.CreateScope())
-
 {
-
     try
-
     {
-
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        await context.Database.MigrateAsync();
-
+        await context.Database.EnsureCreatedAsync();
     }
-
-    catch { /* Baza pewnie ju¿ dzia³a */ }
-
+    catch { }
 }
-
-
 
 // --- ENDPOINTY ---
 
+app.MapGet("/", () => "API NetLine dzia³a. Wywo³aj /scan-my-home, aby przeszukaæ sieæ.");
 
-
-app.MapGet("/", () => "API NetLine dzia³a. Wywo³aj /scan-my-home");
-
-
-
+// Endpoint do podgl¹du wszystkich zapisanych urz¹dzeñ
 app.MapGet("/devices", async (AppDbContext db) => await db.DevicesBasicInfo.ToListAsync());
 
-
-
-app.MapGet("/scan-my-home", async (AppDbContext db, HttpClient client) =>
-
+// G£ÓWNY SKANER
+app.MapGet("/scan-my-home", async (AppDbContext db) =>
 {
+    // 1. POBIERANIE NAZWY SIECI WIFI (SSID)
+    string ssid = "Nie wykryto (Ethernet)";
+    try
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "netsh",
+                Arguments = "wlan show interfaces",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+        process.Start();
+        string output = process.StandardOutput.ReadToEnd();
+        var match = Regex.Match(output, @"^\s+SSID\s+:\s+(.*)$", RegexOptions.Multiline);
+        if (match.Success) ssid = match.Groups[1].Value.Trim();
+    }
+    catch { }
 
-    var hostInfo = await Dns.GetHostEntryAsync(Dns.GetHostName());
+    // 2. IDENTYFIKACJA TWOJEGO IP I PREFIKSU SIECI
+    var hostName = Dns.GetHostName();
+    var hostEntry = await Dns.GetHostEntryAsync(hostName);
+    var myIp = hostEntry.AddressList
+        .FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
 
-    var localIp = hostInfo.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?.ToString();
+    if (myIp == null) return Results.Problem("Nie wykryto adresu IP hosta.");
 
-    if (string.IsNullOrEmpty(localIp)) return Results.Problem("Nie wykryto IP.");
+    string ipString = myIp.ToString();
+    string networkPrefix = ipString.Substring(0, ipString.LastIndexOf('.') + 1);
 
-
-
-    string networkPrefix = localIp.Substring(0, localIp.LastIndexOf('.'));
+    // Oznaczamy wszystkie urz¹dzenia w bazie jako Offline przed skanowaniem
+    var allDevices = await db.DevicesBasicInfo.ToListAsync();
+    foreach (var d in allDevices) d.Status = "Offline";
 
     int foundCount = 0;
 
-
-
+    // 3. SKANOWANIE ZAKRESU (od .1 do .30 - najbezpieczniejszy zakres domowy)
     for (int i = 1; i <= 30; i++)
-
     {
-
-        string testIp = $"{networkPrefix}.{i}";
+        string testIp = networkPrefix + i;
 
         using var ping = new Ping();
-
         try
-
         {
-
+            // Próbujemy "dopingowaæ" urz¹dzenie 
             var reply = await ping.SendPingAsync(testIp, 100);
 
             if (reply.Status == IPStatus.Success)
-
             {
-
-                // 1. Pobieramy MAC (¿eby zapytaæ o producenta)
-
-                string mac = "Unknown";
-
+                //  Próbujemy pobraæ jego nazwê sieciow¹
+                string displayName = $"URZADZENIE-{i}";
                 try
-
                 {
-
-                    var psi = new ProcessStartInfo("arp", "-a " + testIp) { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
-
-                    using var process = Process.Start(psi);
-
-                    string output = process.StandardOutput.ReadToEnd();
-
-                    var match = Regex.Match(output, @"([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})");
-
-                    if (match.Success) mac = match.Value.ToUpper().Replace("-", ":");
-
-                }
-
-                catch { }
-
-
-
-                // 2. Odpytujemy API o producenta (jeœli znamy MAC)
-
-                string manufacturer = "Nieznane";
-
-                if (mac != "Unknown")
-
-                {
-
-                    try
-
-                    {
-
-                        var response = await client.GetAsync($"https://api.macvendors.com/{mac}");
-
-                        if (response.IsSuccessStatusCode) manufacturer = await response.Content.ReadAsStringAsync();
-
-                    }
-
-                    catch { }
-
-                }
-
-
-
-                // 3. Próba pobrania nazwy z DNS (np. laptop-home)
-
-                string dnsName = "";
-
-                try
-
-                {
-
                     var entry = await Dns.GetHostEntryAsync(testIp);
-
-                    dnsName = entry.HostName.Split('.')[0].ToUpper();
-
+                    displayName = entry.HostName.Split('.')[0].ToUpper();
                 }
+                catch { /* Brak nazwy DNS - zostanie URZADZENIE-X */ }
 
-                catch { }
+                // Jeœli to nasze IP, dodajmy dopisek
+                if (testIp == ipString) displayName = $"{hostName} (MÓJ HOST)";
 
-
-
-                // 4. £¹czymy to w jedn¹ sensown¹ nazwê dla u¿ytkownika
-
-                // Priorytet: Nazwa z DNS > Producent > IP
-
-                string finalDisplayName = !string.IsNullOrEmpty(dnsName) ? dnsName : (manufacturer != "Nieznane" ? manufacturer : $"Urz¹dzenie-{testIp.Split('.').Last()}");
-
-
-
-                // 5. Okreœlamy typ (do tabeli)
-
-                string type = "Komputer";
-
-                string check = (finalDisplayName + manufacturer).ToLower();
-
-                if (check.Contains("samsung") || check.Contains("phone") || check.Contains("oppo") || check.Contains("apple")) type = "Telefon";
-
-                else if (check.Contains("tv") || check.Contains("lg") || check.Contains("sony")) type = "Telewizor";
-
-                else if (testIp.EndsWith(".1") || check.Contains("router") || check.Contains("tp-link")) type = "Router";
-
-
-
-                // 6. ZAPIS DO BAZY (bez nowych pól, u¿ywamy tych co masz)
-
+                // 4. ZAPIS LUB AKTUALIZACJA W BAZIE
                 var existing = await db.DevicesBasicInfo.FirstOrDefaultAsync(d => d.IpAddress == testIp);
 
                 if (existing == null)
-
                 {
-
                     db.DevicesBasicInfo.Add(new DeviceBasicInfo
-
                     {
-
                         IpAddress = testIp,
-
-                        UniqueIdOrName = finalDisplayName, // Tu wpadnie np. "OPPO" albo "LG"
-
-                        DeviceType = type,
-
+                        UniqueIdOrName = displayName,
+                        DeviceType = testIp.EndsWith(".1") ? "Router" : "Wykryte",
                         Status = "Online"
-
                     });
-
-                    foundCount++;
-
                 }
-
                 else
-
                 {
-
-                    existing.UniqueIdOrName = finalDisplayName;
-
-                    existing.DeviceType = type;
-
+                    existing.UniqueIdOrName = displayName;
                     existing.Status = "Online";
-
                 }
-
-
-
-                // Czekamy chwilê, ¿eby nie zablokowali nas za zbyt szybkie pytania o MAC
-
-                await Task.Delay(500);
-
+                foundCount++;
             }
-
         }
-
-        catch { }
-
+        catch { /* Ignorujemy b³êdy dla danego IP */ }
     }
-
-
 
     await db.SaveChangesAsync();
 
-    return Results.Ok($"Skanowanie zakoñczone. Znaleziono {foundCount} urz¹dzeñ.");
-
+    return Results.Ok(new
+    {
+        NazwaSieci = ssid,
+        TwojeIP = ipString,
+        ZakresSkanowania = $"{networkPrefix}1 - {networkPrefix}30",
+        ZnalezionoUrzadzen = foundCount,
+        Status = "Baza danych zaktualizowana"
+    });
 });
 
-
-
 app.MapDefaultEndpoints();
-
 app.Run();
-
-
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary);
