@@ -25,17 +25,24 @@ public class SnmpService
         try
         {
             // --- 1. POMIAR PING ---
-            using var ping = new Ping();
-            // Wysyłamy krótki sygnał, czekamy max 1000ms
-            var reply = await ping.SendPingAsync(ipAddress, 1000);
+            try
+            {
+                using var ping = new Ping();
+                // Zwiększamy timeout do 2 sekund i dodajemy mały bufor
+                var reply = await ping.SendPingAsync(ipAddress, 2000);
 
-            if (reply.Status == IPStatus.Success)
-            {
-                result.PingResponseTimeMs = reply.RoundtripTime;
+                if (reply != null && reply.Status == IPStatus.Success)
+                {
+                    result.PingResponseTimeMs = reply.RoundtripTime == 0 ? 1 : reply.RoundtripTime;
+                    // Czasami 127.0.0.1 zwraca 0ms, co baza może mylić z błędem, ustawiamy min. 1ms
+                }
+                else
+                {
+                    result.PingResponseTimeMs = null;
+                }
             }
-            else
+            catch
             {
-                // Jeśli ping nie przejdzie, już wiemy, że może być problem
                 result.PingResponseTimeMs = null;
             }
 

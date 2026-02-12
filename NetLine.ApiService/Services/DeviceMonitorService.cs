@@ -1,4 +1,6 @@
 ﻿using NetLine.ApiService.Data;
+using NetLine.ApiService.Hubs; // Upewnij się, że ten folder istnieje
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace NetLine.ApiService.Services;
@@ -7,12 +9,17 @@ public class DeviceMonitorService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DeviceMonitorService> _logger;
+    private readonly IHubContext<DeviceHub> _hubContext; // SignalR Hub
     private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(30);
 
-    public DeviceMonitorService(IServiceProvider serviceProvider, ILogger<DeviceMonitorService> logger)
+    public DeviceMonitorService(
+        IServiceProvider serviceProvider,
+        ILogger<DeviceMonitorService> logger,
+        IHubContext<DeviceHub> hubContext)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,7 +43,6 @@ public class DeviceMonitorService : BackgroundService
 
                         var scan = await snmpService.GetDeviceInfoAsync(device.IpAddress);
 
-                        // KLUCZOWA LOGIKA STATUSU
                         if (scan.Success)
                         {
                             device.Status = "Online";
@@ -50,14 +56,19 @@ public class DeviceMonitorService : BackgroundService
                         {
                             // Jeśli skanowanie SNMP się nie udało (Success = false)
                             device.Status = "Offline";
-                            device.PingResponseTimeMs = scan.PingResponseTimeMs; // Może być null jeśli ping też padł
+
+                            // POPRAWKA: Wymuszamy null, aby przy statusie Offline nie wisiał stary Ping
+                            device.PingResponseTimeMs = null;
                         }
 
                         device.LastScanned = DateTime.UtcNow;
                     }
 
-                    // Zapisujemy wszystkie zmiany w statusach do bazy danych
+                    // Zapisujemy zmiany w bazie
                     await db.SaveChangesAsync(stoppingToken);
+
+                    // SIGNALR: Powiadamiamy wszystkich podłączonych klientów o aktualizacji
+                    await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", stoppingToken);
                 }
             }
             catch (Exception ex)
