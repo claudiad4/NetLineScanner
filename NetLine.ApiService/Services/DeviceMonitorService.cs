@@ -7,7 +7,7 @@ public class DeviceMonitorService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DeviceMonitorService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(30); // Czas co jaki odświeżamy
+    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(30);
 
     public DeviceMonitorService(IServiceProvider serviceProvider, ILogger<DeviceMonitorService> logger)
     {
@@ -28,29 +28,35 @@ public class DeviceMonitorService : BackgroundService
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     var snmpService = scope.ServiceProvider.GetRequiredService<SnmpService>();
 
-                    // 1. Pobierz wszystkie urządzenia z bazy
                     var devices = await db.DevicesInfo.ToListAsync(stoppingToken);
 
                     foreach (var device in devices)
                     {
-                        _logger.LogInformation($"Sprawdzam urządzenie: {device.IpAddress}");
+                        _logger.LogInformation($"Sprawdzam: {device.IpAddress}");
 
-                        // 2. Wykonaj skanowanie tym samym serwisem, którego używaliśmy w Swaggerze
                         var scan = await snmpService.GetDeviceInfoAsync(device.IpAddress);
 
-                        // 3. Zaktualizuj dane w bazie
-                        device.Status = scan.Success ? "Online" : "Offline";
-                        device.PingResponseTimeMs = scan.PingResponseTimeMs;
-                        device.LastScanned = DateTime.UtcNow;
-
-                        // Jeśli SNMP odpowiedziało, możemy też odświeżyć dane systemowe
+                        // KLUCZOWA LOGIKA STATUSU
                         if (scan.Success)
                         {
+                            device.Status = "Online";
+                            device.PingResponseTimeMs = scan.PingResponseTimeMs;
                             device.SysName = scan.Name;
                             device.SysDescr = scan.Description;
+                            device.SysLocation = scan.Location;
+                            device.SysContact = scan.Contact;
                         }
+                        else
+                        {
+                            // Jeśli skanowanie SNMP się nie udało (Success = false)
+                            device.Status = "Offline";
+                            device.PingResponseTimeMs = scan.PingResponseTimeMs; // Może być null jeśli ping też padł
+                        }
+
+                        device.LastScanned = DateTime.UtcNow;
                     }
 
+                    // Zapisujemy wszystkie zmiany w statusach do bazy danych
                     await db.SaveChangesAsync(stoppingToken);
                 }
             }
@@ -59,7 +65,6 @@ public class DeviceMonitorService : BackgroundService
                 _logger.LogError($"Błąd w pętli monitorującej: {ex.Message}");
             }
 
-            // Czekaj 30 sekund przed kolejną pętlą
             await Task.Delay(_checkInterval, stoppingToken);
         }
     }
