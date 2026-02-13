@@ -8,10 +8,44 @@
 
 <PageTitle>Monitoring Urządzeń</PageTitle>
 
+@* --- STYLE CSS --- *@
+<style>
+    .detail-row {
+        background-color: #f8faff;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .details-container {
+        padding: 20px;
+        border-left: 5px solid #0d6efd;
+        margin: 10px 0 10px 40px;
+        background: white;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .table-hover tbody tr:not(.detail-row):hover {
+        background-color: rgba(13, 110, 253, 0.05);
+        cursor: pointer;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-cpu"></i> Panel Monitoringu</h1>
+    <h1><i class="bi bi-speedometer2"></i> Monitor Sieciowy</h1>
     <div class="text-end">
-        <span class="badge bg-info text-dark">Tryb: Live (SignalR)</span>
+        <span class="badge bg-success border shadow-sm p-2">Status: Połączono Live</span>
     </div>
 </div>
 
@@ -19,103 +53,121 @@
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2">Inicjalizacja połączenia i pobieranie danych...</p>
-    </div>
-}
-else if (!devices.Any())
-{
-    <div class="alert alert-warning shadow-sm">
-        <i class="bi bi-exclamation-triangle"></i> Brak urządzeń w systemie.
-        <a href="/add-device" class="alert-link">Dodaj pierwsze urządzenie</a>, aby rozpocząć skanowanie.
+        <p class="mt-2">Pobieranie danych z bazy...</p>
     </div>
 }
 else
 {
     <div class="table-responsive shadow-sm rounded">
-        <table class="table table-hover align-middle bg-white">
+        <table class="table align-middle bg-white table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th style="width: 120px;">Status</th>
-                    <th>Nazwa Urządzenia</th>
+                    <th style="width: 40px;"></th>
+                    <th style="width: 130px;">Status</th>
+                    <th>Urządzenie</th>
                     <th>Adres IP</th>
-                    <th>Odpowiedź (Ping)</th>
-                    <th>Ostatnia aktualizacja</th>
+                    <th>Odpowiedź</th>
+                    <th>Ostatni skan</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var device in devices)
                 {
-                    <tr>
-                        <td>
-                            @if (device.Status == "Online")
-                            {
-                                <span class="badge rounded-pill bg-success w-100">
-                                    <i class="bi bi-check-circle"></i> ONLINE
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="badge rounded-pill bg-danger w-100">
-                                    <i class="bi bi-x-circle"></i> OFFLINE
-                                </span>
-                            }
+                    // Główny wiersz tabeli
+                    <tr @onclick="() => ToggleDetails(device.Id)">
+                        <td class="text-center">
+                            <i class="bi @(expandedDeviceId == device.Id ? "bi-chevron-down text-primary" : "bi-chevron-right text-muted")"></i>
                         </td>
-                        <td><strong>@device.UserDefinedName</strong></td>
-                        <td><code class="text-primary">@device.IpAddress</code></td>
+                        <td>
+                            <span class="badge rounded-pill @(device.Status == "Online" ? "bg-success" : "bg-danger") w-100">
+                                <i class="bi @(device.Status == "Online" ? "bi-check-circle" : "bi-x-circle")"></i> @device.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-bold">@device.UserDefinedName</div>
+                            <small class="text-muted">@device.DeviceType</small>
+                        </td>
+                        <td><code class="text-primary fw-bold">@device.IpAddress</code></td>
                         <td>
                             @if (device.PingResponseTimeMs.HasValue)
                             {
-                                <span>@device.PingResponseTimeMs ms</span>
+                                <span class="text-dark">@device.PingResponseTimeMs ms</span>
                             }
                             else
                             {
                                 <span class="text-muted">---</span>
                             }
                         </td>
-                        <td class="text-muted">
-                            @device.LastScanned.ToLocalTime().ToString("HH:mm:ss")
-                        </td>
+                        <td><small>@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
                     </tr>
+
+                    // Wiersz rozwijany ze szczegółami
+                    @if (expandedDeviceId == device.Id)
+                    {
+                        <tr class="detail-row">
+                            <td colspan="6">
+                                <div class="details-container">
+                                    <div class="row">
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-info-square"></i> Dane SNMP</h6>
+                                            <p class="mb-1"><strong>Nazwa sys:</strong> @(device.SysName ?? "Brak danych")</p>
+                                            <p class="mb-1"><strong>Lokalizacja:</strong> @(device.SysLocation ?? "Brak")</p>
+                                            <p class="mb-1"><strong>Kontakt:</strong> @(device.SysContact ?? "Brak")</p>
+                                        </div>
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-activity"></i> Wydajność</h6>
+                                            <p class="mb-1"><strong>UpTime:</strong> <span class="text-success">@(device.SysUpTime ?? "---")</span></p>
+                                            <p class="mb-1"><strong>Interfejsy:</strong> @(device.SysInterfacesCount?.ToString() ?? "0") szt.</p>
+                                            <p class="mb-1"><strong>Ostatni Ping:</strong> @device.PingResponseTimeMs ms</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Pełny opis</h6>
+                                            <small class="text-muted d-block" style="line-height: 1.2;">
+                                                @(device.SysDescr ?? "Urządzenie nie zwróciło pełnego opisu systemowego przez protokół SNMP.")
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
     </div>
-    <p class="text-muted small mt-2">
-        <i class="bi bi-info-circle"></i> Tabela odświeża się automatycznie po wykryciu zmiany w sieci.
-    </p>
+    <div class="mt-2 text-muted small">
+        <i class="bi bi-lightbulb"></i> Podpowiedź: Kliknij w wiersz urządzenia, aby zobaczyć szczegóły SNMP.
+    </div>
 }
 
 @code {
     private List<DeviceInfo>? devices;
     private HubConnection? hubConnection;
+    private int? expandedDeviceId;
+
+    private void ToggleDetails(int id)
+    {
+        if (expandedDeviceId == id) expandedDeviceId = null;
+        else expandedDeviceId = id;
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Pobierz dane startowe
         await LoadData();
 
-        // 2. Skonfiguruj SignalR (Sprawdź czy port 7503 jest poprawny!)
+        // Skonfiguruj SignalR
         hubConnection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:7503/devicehub")
+            .WithUrl("https://localhost:7503/devicehub") // <-- Upewnij się, że port jest poprawny!
             .WithAutomaticReconnect()
             .Build();
 
-        // 3. Nasłuchuj sygnału z backendu
         hubConnection.On("DeviceStatusUpdated", async () =>
         {
             await LoadData();
             await InvokeAsync(StateHasChanged);
         });
 
-        // 4. Połącz się
-        try
-        {
-            await hubConnection.StartAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"SignalR Error: {ex.Message}");
-        }
+        await hubConnection.StartAsync();
     }
 
     private async Task LoadData()
@@ -126,11 +178,10 @@ else
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"API Error: {ex.Message}");
+            Console.WriteLine($"Błąd pobierania danych: {ex.Message}");
         }
     }
 
-    // Zamknij połączenie przy wychodzeniu ze strony
     public async ValueTask DisposeAsync()
     {
         if (hubConnection is not null)
