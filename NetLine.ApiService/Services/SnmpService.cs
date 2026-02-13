@@ -14,6 +14,8 @@ public class SnmpScanResult
     public string? Contact { get; set; }
     public string? ErrorMessage { get; set; }
     public long? PingResponseTimeMs { get; set; }
+    public string? UpTime { get; set; }
+    public int? InterfacesCount { get; set; }
 }
 
 public class SnmpService
@@ -49,10 +51,12 @@ public class SnmpService
             // --- 2. POBIERANIE DANYCH SNMP ---
             var variables = new List<Variable>
             {
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.1.0")), // Opis
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.5.0")), // Nazwa
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.6.0")), // Lokalizacja
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.4.0"))  // Kontakt
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.1.0")), // [0] Descr
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.5.0")), // [1] Name
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.6.0")), // [2] Location
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.4.0")), // [3] Contact
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.3.0")), // [4] UpTime (NOWE)
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.2.1.0"))  // [5] IfNumber (NOWE)
             };
 
             // Wykonujemy GET SNMP (Timeout 2000ms)
@@ -69,6 +73,8 @@ public class SnmpService
             result.Name = snmpData[1].Data.ToString();
             result.Location = snmpData[2].Data.ToString();
             result.Contact = snmpData[3].Data.ToString();
+            result.UpTime = snmpData[4].Data.ToString();
+            result.InterfacesCount = int.TryParse(snmpData[5].Data.ToString(), out var ifCount) ? ifCount : null;
         }
         catch (Exception ex)
         {

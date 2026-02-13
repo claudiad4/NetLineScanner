@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+namespace NetLine.ApiService.Models;
+
 [Table("deviceinfo")]
 public class DeviceInfo
 {
@@ -25,7 +27,7 @@ public class DeviceInfo
 
     // --- NOWE Dane SNMP (Krok w stronę szczegółów) ---
     public string? SysUpTime { get; set; }      // Czas od ostatniego restartu
-    public int? InterfacesCount { get; set; }   // Ile kart sieciowych ma urządzenie
+    public int? SysInterfacesCount { get; set; }   // Ile kart sieciowych ma urządzenie
 
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
 }

@@ -58,7 +58,10 @@ public class DeviceMonitorService : BackgroundService
                                 device.SysDescr = scan.Description;
                                 device.SysLocation = scan.Location;
                                 device.SysContact = scan.Contact;
+                                device.SysUpTime = scan.UpTime;
+                                device.SysInterfacesCount = scan.InterfacesCount;
                                 _logger.LogInformation($"SNMP Success dla {device.IpAddress}");
+
                             }
                             else
                             {
