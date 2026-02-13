@@ -1,34 +1,31 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NetLine.ApiService.Models;
-
 [Table("deviceinfo")]
 public class DeviceInfo
 {
     [Key]
     public int Id { get; set; }
 
-    // Data from user input during adding a device manually
     [Required]
-    public string UserDefinedName { get; set; } = default!; // Twoja własna nazwa (np. "Serwer w Piwnicy")
-
+    public string UserDefinedName { get; set; } = default!;
     [Required]
-    public string DeviceType { get; set; } = "Other"; // Host, Server, Switch, Router, Firewall, AP, Other
-
-    // Data from the network
+    public string DeviceType { get; set; } = "Other";
     [Required]
     public string IpAddress { get; set; } = default!;
 
-    public string Status { get; set; } = "Offline"; // Online / Offline
+    public string Status { get; set; } = "Offline";
     public long? PingResponseTimeMs { get; set; }
 
-    // --- Dane from SNMP (OID) ---
-    public string? SysName { get; set; }      // sysName.0
-    public string? SysDescr { get; set; }     // sysDescr.0
-    public string? SysLocation { get; set; }  // sysLocation.0
-    public string? SysContact { get; set; }   // sysContact.0
+    // --- Dane podstawowe SNMP ---
+    public string? SysName { get; set; }
+    public string? SysDescr { get; set; }
+    public string? SysLocation { get; set; }
+    public string? SysContact { get; set; }
 
-    // --- Metadata ---
+    // --- NOWE Dane SNMP (Krok w stronę szczegółów) ---
+    public string? SysUpTime { get; set; }      // Czas od ostatniego restartu
+    public int? InterfacesCount { get; set; }   // Ile kart sieciowych ma urządzenie
+
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
 }
