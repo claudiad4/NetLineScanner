@@ -1,0 +1,141 @@
+﻿@page "/devices"
+@using NetLine.Web.Services
+@using NetLine.ApiService.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@rendermode InteractiveServer
+@inject DeviceApiClient ApiClient
+@implements IAsyncDisposable
+
+<PageTitle>Monitoring Urządzeń</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-cpu"></i> Panel Monitoringu</h1>
+    <div class="text-end">
+        <span class="badge bg-info text-dark">Tryb: Live (SignalR)</span>
+    </div>
+</div>
+
+@if (devices == null)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Inicjalizacja połączenia i pobieranie danych...</p>
+    </div>
+}
+else if (!devices.Any())
+{
+    <div class="alert alert-warning shadow-sm">
+        <i class="bi bi-exclamation-triangle"></i> Brak urządzeń w systemie.
+        <a href="/add-device" class="alert-link">Dodaj pierwsze urządzenie</a>, aby rozpocząć skanowanie.
+    </div>
+}
+else
+{
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 120px;">Status</th>
+                    <th>Nazwa Urządzenia</th>
+                    <th>Adres IP</th>
+                    <th>Odpowiedź (Ping)</th>
+                    <th>Ostatnia aktualizacja</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var device in devices)
+                {
+                    <tr>
+                        <td>
+                            @if (device.Status == "Online")
+                            {
+                                <span class="badge rounded-pill bg-success w-100">
+                                    <i class="bi bi-check-circle"></i> ONLINE
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill bg-danger w-100">
+                                    <i class="bi bi-x-circle"></i> OFFLINE
+                                </span>
+                            }
+                        </td>
+                        <td><strong>@device.UserDefinedName</strong></td>
+                        <td><code class="text-primary">@device.IpAddress</code></td>
+                        <td>
+                            @if (device.PingResponseTimeMs.HasValue)
+                            {
+                                <span>@device.PingResponseTimeMs ms</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">---</span>
+                            }
+                        </td>
+                        <td class="text-muted">
+                            @device.LastScanned.ToLocalTime().ToString("HH:mm:ss")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small mt-2">
+        <i class="bi bi-info-circle"></i> Tabela odświeża się automatycznie po wykryciu zmiany w sieci.
+    </p>
+}
+
+@code {
+    private List<DeviceInfo>? devices;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Pobierz dane startowe
+        await LoadData();
+
+        // 2. Skonfiguruj SignalR (Sprawdź czy port 7503 jest poprawny!)
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7503/devicehub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        // 3. Nasłuchuj sygnału z backendu
+        hubConnection.On("DeviceStatusUpdated", async () =>
+        {
+            await LoadData();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        // 4. Połącz się
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR Error: {ex.Message}");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            devices = await ApiClient.GetDevicesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"API Error: {ex.Message}");
+        }
+    }
+
+    // Zamknij połączenie przy wychodzeniu ze strony
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

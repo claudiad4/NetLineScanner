@@ -1,0 +1,69 @@
+﻿@page "/add-device"
+@using NetLine.Web.Services
+@rendermode InteractiveServer
+@inject DeviceApiClient ApiClient
+@inject NavigationManager Nav
+
+<PageTitle>Dodaj Urządzenie</PageTitle>
+
+<h1>Dodaj nowe urządzenie</h1>
+
+<div class="card p-3" style="max-width: 400px;">
+    <div class="mb-3">
+        <label class="form-label">Adres IP</label>
+        <input @bind="ip" class="form-control" placeholder="np. 192.168.1.1" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Nazwa własna</label>
+        <input @bind="label" class="form-control" placeholder="np. Moja Drukarka" />
+    </div>
+
+    <button class="btn btn-primary" @onclick="Submit" disabled="@isLoading">
+        @if (isLoading) {
+            <span class="spinner-border spinner-border-sm"></span> <span> Skanowanie...</span>
+        } else {
+            <span>Dodaj i Skanuj</span>
+        }
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private string ip = "";
+    private string label = "";
+    private bool isLoading = false;
+    private string? errorMessage;
+
+    private async Task Submit()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try 
+        {
+            // Próba dodania przez naszego "kelnera"
+            var success = await ApiClient.AddDeviceAsync(ip, label, "Workstation");
+            
+            if (success) 
+            {
+                Nav.NavigateTo("/devices");
+            } 
+            else 
+            {
+                errorMessage = "Serwer nie mógł dodać urządzenia. Sprawdź czy IP jest poprawne.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Błąd połączenia: " + ex.Message;
+        }
+        finally 
+        {
+            isLoading = false;
+        }
+    }
+}
