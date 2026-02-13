@@ -15,14 +15,14 @@
     </div>
     <div class="mb-3">
         <label class="form-label">Nazwa własna</label>
-        <input @bind="label" class="form-control" placeholder="np. Moja Drukarka" />
+        <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
     </div>
 
     <button class="btn btn-primary" @onclick="Submit" disabled="@isLoading">
         @if (isLoading) {
-            <span class="spinner-border spinner-border-sm"></span> <span> Skanowanie...</span>
+            <span class="spinner-border spinner-border-sm"></span> <span> Dodawanie urządzenia...</span>
         } else {
-            <span>Dodaj i Skanuj</span>
+            <span>Dodaj urządzenie</span>
         }
     </button>
 </div>
