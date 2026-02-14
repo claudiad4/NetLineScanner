@@ -4,32 +4,93 @@
 @inject DeviceApiClient ApiClient
 @inject NavigationManager Nav
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
 <PageTitle>Dodaj Urządzenie</PageTitle>
+
+@* --- STYLE DLA TOASTA I VALIDACJI --- *@
+<style>
+    /* Styl powiadomienia (Toast) */
+    .custom-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #d1e7dd; /* Jasny zielony */
+        color: #0f5132; /* Ciemny zielony tekst */
+        border: 1px solid #badbcc;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    /* Animacja wjazdu toasta */
+    @@keyframes slideIn {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Inputy IP - usunięcie strzałek w Chrome/Edge */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+
+@* --- POWIADOMIENIE SUKCESU --- *@
+@if (showSuccessToast)
+{
+    <div class="custom-toast">
+        <i class="bi bi-check-circle-fill" style="font-size: 1.2rem;"></i>
+        <div>
+            <strong>Sukces!</strong><br />
+            Urządzenie dodane pomyślnie.
+        </div>
+    </div>
+}
 
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh; padding: 20px;">
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 500px;">
         <h3 class="mb-4 text-center">Dodaj nowe urządzenie</h3>
 
+        @* --- SEKJA IP --- *@
         <div class="mb-3">
             <label class="form-label d-block fw-bold">Adres IP</label>
             <div class="d-flex align-items-center justify-content-between">
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip1" style="width: 70px;" />
+                @* type="number" blokuje wpisywanie tekstu na mobile, a min/max pomaga w walidacji *@
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" placeholder="192" style="width: 70px;" />
                 <span class="fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip2" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" placeholder="168" style="width: 70px;" />
                 <span class="fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip3" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip3" placeholder="0" style="width: 70px;" />
                 <span class="fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip4" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip4" placeholder="1" style="width: 70px;" />
             </div>
+            @if (isIpInvalid)
+            {
+                <div class="text-danger small mt-1">
+                    <i class="bi bi-exclamation-circle"></i> Wpisz poprawne liczby (0-255).
+                </div>
+            }
         </div>
 
+        @* --- NAZWA --- *@
         <div class="mb-3">
             <label class="form-label fw-bold">Nazwa własna</label>
             <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
         </div>
 
+        @* --- RODZAJ (LISTA) --- *@
         <div class="mb-4">
             <label class="form-label fw-bold">Rodzaj urządzenia</label>
             <select class="form-select" @bind="deviceType">
@@ -44,11 +105,12 @@
             </select>
         </div>
 
+        @* --- PRZYCISK --- *@
         <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="Submit" disabled="@isLoading" style="background-color: #6f42c1; border-color: #6f42c1;">
             @if (isLoading)
             {
                 <span class="spinner-border spinner-border-sm"></span>
-                <span> Dodawanie...</span>
+                <span> Zapisywanie...</span>
             }
             else
             {
@@ -56,6 +118,7 @@
             }
         </button>
 
+        @* --- KOMUNIKAT BŁĘDU (API) --- *@
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger mt-3">@errorMessage</div>
@@ -64,40 +127,75 @@
 </div>
 
 @code {
-    private string ip1 = ""; private string ip2 = ""; private string ip3 = ""; private string ip4 = "";
+    // Zmieniamy typ na string, żeby łatwiej obsługiwać inputy, ale walidujemy jako liczby
+    private string ip1 = "";
+    private string ip2 = "";
+    private string ip3 = "";
+    private string ip4 = "";
+
     private string label = "";
     private string deviceType = "Komputer";
+
     private bool isLoading = false;
+    private bool showSuccessToast = false; // Sterowanie tostem
+    private bool isIpInvalid = false;      // Sterowanie błędem walidacji
     private string? errorMessage;
 
     private async Task Submit()
     {
+        // 1. Reset stanów
         isLoading = true;
         errorMessage = null;
+        isIpInvalid = false;
+
+        // 2. Walidacja IP (Sprawdzamy czy to liczby 0-255)
+        if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
+        {
+            isIpInvalid = true;
+            errorMessage = "Popraw błędy w adresie IP.";
+            isLoading = false;
+            return;
+        }
+
+        // 3. Złożenie adresu IP
         string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
 
         try
         {
-            // Wysyłamy po prostu wybrany typ z listy.
-            // Dzięki logice w Devices.razor, ikona dobierze się sama.
             var success = await ApiClient.AddDeviceAsync(fullIp, label, deviceType);
 
             if (success)
             {
+                // 4. POKAŻ SUKCES
+                showSuccessToast = true;
+                isLoading = false;
+                StateHasChanged(); // Odśwież widok, żeby pokazać toast
+
+                // 5. Czekaj 2 sekundy i przekieruj
+                await Task.Delay(2000);
                 Nav.NavigateTo("/devices");
             }
             else
             {
-                errorMessage = "Błąd zapisu na serwerze.";
+                errorMessage = "Serwer odrzucił zapis (sprawdź czy IP nie jest zajęte).";
+                isLoading = false;
             }
         }
         catch (Exception ex)
         {
             errorMessage = "Błąd połączenia: " + ex.Message;
-        }
-        finally
-        {
             isLoading = false;
         }
+    }
+
+    // Metoda pomocnicza do sprawdzania liczb
+    private bool IsValidByte(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return false;
+        if (int.TryParse(input, out int result))
+        {
+            return result >= 0 && result <= 255;
+        }
+        return false;
     }
 }
