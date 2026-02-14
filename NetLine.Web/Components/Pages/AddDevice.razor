@@ -25,9 +25,20 @@
             </div>
         </div>
 
-        <div class="mb-4">
+        <div class="mb-3">
             <label class="form-label">Nazwa własna</label>
             <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Rodzaj urządzenia</label>
+            <select class="form-select" @bind="deviceType">
+                <option value="Komputer">Komputer</option>
+                <option value="Serwer">Serwer</option>
+                <option value="Switch">Switch</option>
+                <option value="Drukarka">Drukarka</option>
+                <option value="Other">Inne</option>
+            </select>
         </div>
 
         <button class="btn btn-primary w-100" @onclick="Submit" disabled="@isLoading">
@@ -53,6 +64,7 @@
     private string ip4 = "";
     
     private string label = "";
+    private string deviceType = "Komputer"; // Domyślna wartość
     private bool isLoading = false;
     private string? errorMessage;
 
@@ -66,7 +78,8 @@
         
         try 
         {
-            var success = await ApiClient.AddDeviceAsync(fullIp, label, "Workstation");
+            // Przekazujemy wybraną wartość deviceType do API
+            var success = await ApiClient.AddDeviceAsync(fullIp, label, deviceType);
             
             if (success) 
             {
