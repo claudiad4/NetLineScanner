@@ -4,12 +4,12 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @rendermode InteractiveServer
 @inject DeviceApiClient ApiClient
+@inject IConfiguration Config
 @implements IAsyncDisposable
 
 <PageTitle>Monitoring Urządzeń</PageTitle>
 
 <style>
-    /* Delikatne kolory dla labelek technologii */
     .bg-soft-success {
         background-color: #d1e7dd !important;
         color: #0f5132 !important;
@@ -49,17 +49,19 @@
         text-align: center;
         border-radius: 4px;
     }
-
     @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-5px);
-        }
+        from
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
     }
 </style>
 
@@ -119,6 +121,7 @@ else
                                 }
                                 else
                                 {
+
                                     <span class="badge bg-soft-danger badge-tech" title="Brak odpowiedzi Ping">ICMP</span>
                                 }
 
@@ -129,6 +132,7 @@ else
                                 }
                                 else
                                 {
+
                                     <span class="badge bg-soft-danger badge-tech" title="Brak danych protokołu SNMP">SNMP</span>
                                 }
                             </div>
@@ -210,23 +214,31 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:7503/devicehub")
-            .WithAutomaticReconnect()
-            .Build();
 
-        hubConnection.On("DeviceStatusUpdated", async () =>
+        // Service Discovery pobiera adres API dynamicznie
+        var apiBaseUrl = Config["services:apiservice:http:0"] ?? Config["services:apiservice:https:0"];
+
+        if (!string.IsNullOrEmpty(apiBaseUrl))
         {
-            await LoadData();
-            await InvokeAsync(StateHasChanged);
-        });
-        await hubConnection.StartAsync();
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{apiBaseUrl}/devicehub")
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On("DeviceStatusUpdated", async () =>
+            {
+                await LoadData();
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+        }
     }
 
     private async Task LoadData()
     {
         try { devices = await ApiClient.GetDevicesAsync(); }
-        catch (Exception ex) { Console.WriteLine(ex.Message); }
+        catch (Exception ex) { Console.WriteLine($"Błąd pobierania danych: {ex.Message}"); }
     }
 
     public async ValueTask DisposeAsync()
