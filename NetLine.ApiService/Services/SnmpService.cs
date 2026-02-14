@@ -55,8 +55,8 @@ public class SnmpService
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.5.0")), // [1] Name
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.6.0")), // [2] Location
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.4.0")), // [3] Contact
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.3.0")), // [4] UpTime (NOWE)
-                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.2.1.0"))  // [5] IfNumber (NOWE)
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.3.0")), // [4] UpTime 
+                new Variable(new ObjectIdentifier(".1.3.6.1.2.1.2.1.0"))  // [5] IfNumber 
             };
 
             // Wykonujemy GET SNMP (Timeout 2000ms)
