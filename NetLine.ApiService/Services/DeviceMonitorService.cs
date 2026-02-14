@@ -59,6 +59,19 @@ public class DeviceMonitorService : BackgroundService
                             // Jeśli SNMP zawiedzie, ustawiamy status na podstawie Pinga
                             device.Status = scan.PingResponseTimeMs.HasValue ? "Limited" : "Offline";
 
+                            // ==================================================================
+                            // START WYJĄTKU DO TESTÓW:
+                            // Jeżeli SNMP nie działa, ale Ping wynosi dokładnie 1 ms -> Offline
+                            // DODATKOWO: Ukrywamy Ping, aby labelka ICMP zgasła na froncie
+                            // ==================================================================
+                            if (scan.PingResponseTimeMs.HasValue && scan.PingResponseTimeMs.Value == 1)
+                            {
+                                device.Status = "Offline";
+                                device.PingResponseTimeMs = null; // To "zgasi" labelkę ICMP na zielono
+                            }
+                            // ==================================================================
+                            // KONIEC WYJĄTKU
+
                             // KLUCZOWE: Czyścimy tylko UpTime. 
                             // Dzięki temu wiemy na froncie, że SNMP nie odpowiedziało, 
                             // ale SysName, Location i Contact zostają w bazie jako dane historyczne.

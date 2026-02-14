@@ -9,6 +9,19 @@
 <PageTitle>Monitoring Urządzeń</PageTitle>
 
 <style>
+    /* Delikatne kolory dla labelek technologii */
+    .bg-soft-success {
+        background-color: #d1e7dd !important;
+        color: #0f5132 !important;
+        border: 1px solid #badbcc !important;
+    }
+
+    .bg-soft-danger {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+        border: 1px solid #f5c2c7 !important;
+    }
+
     .detail-row {
         background-color: #f8faff;
         animation: fadeIn 0.3s ease-out;
@@ -32,9 +45,9 @@
         font-size: 0.7rem;
         padding: 4px 8px;
         font-weight: bold;
-        min-width: 50px;
+        min-width: 55px;
         text-align: center;
-        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 4px;
     }
 
     @@keyframes fadeIn {
@@ -72,8 +85,8 @@ else
                 <tr>
                     <th style="width: 40px;"></th>
                     <th style="width: 130px;">Status</th>
-                    <th style="width: 130px;">Protokół</th>
-                    <th>Urządzenie (SNMP)</th>
+                    <th style="width: 140px;">Protokół</th>
+                    <th>Urządzenie</th>
                     <th>Adres IP</th>
                     <th>Odpowiedź</th>
                     <th>Ostatni skan</th>
@@ -88,11 +101,13 @@ else
                         </td>
                         <td>
                             @{
-                                var statusClass = device.Status switch { "Online" => "bg-success", "Limited" => "bg-warning text-dark", "Offline" => "bg-danger", _ => "bg-secondary" };
-                                var iconClass = device.Status switch { "Online" => "bi-check-circle", "Limited" => "bi-exclamation-triangle", "Offline" => "bi-x-circle", _ => "bi-question-circle" };
+                                // Jeśli urządzenie odpowiada na ping, zawsze pokazujemy zielony status Online
+                                var statusClass = device.Status == "Offline" ? "bg-danger" : "bg-success";
+                                var iconClass = device.Status == "Offline" ? "bi-x-circle" : "bi-check-circle";
+                                var statusText = device.Status == "Offline" ? "Offline" : "Online";
                             }
                             <span class="badge rounded-pill @statusClass w-100 shadow-sm">
-                                <i class="bi @iconClass"></i> @(device.Status ?? "Nieznany")
+                                <i class="bi @iconClass"></i> @statusText
                             </span>
                         </td>
                         <td>
@@ -100,32 +115,32 @@ else
                                 @* ICMP Label *@
                                 @if (device.PingResponseTimeMs.HasValue)
                                 {
-                                    <span class="badge bg-success badge-tech" title="Ping OK">ICMP</span>
+                                    <span class="badge bg-soft-success badge-tech" title="Urządzenie odpowiada na Ping">ICMP</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-danger badge-tech" title="Brak odpowiedzi Ping">ICMP</span>
+                                    <span class="badge bg-soft-danger badge-tech" title="Brak odpowiedzi Ping">ICMP</span>
                                 }
 
-                                @* SNMP Label - Kluczowa zmiana: sprawdzamy SysUpTime *@
-                                @if (!string.IsNullOrEmpty(device.SysUpTime))
+                                @* SNMP Label *@
+                                @if (!string.IsNullOrEmpty(device.SysUpTime) && device.SysUpTime != "Brak danych")
                                 {
-                                    <span class="badge bg-success badge-tech" title="SNMP Aktywne">SNMP</span>
+                                    <span class="badge bg-soft-success badge-tech" title="Protokół SNMP aktywny">SNMP</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-danger badge-tech" title="Agent SNMP nie odpowiada (Pokazuję dane historyczne)">SNMP</span>
+                                    <span class="badge bg-soft-danger badge-tech" title="Brak danych protokołu SNMP">SNMP</span>
                                 }
                             </div>
                         </td>
                         <td>
                             <div class="fw-bold">@device.UserDefinedName</div>
-                            <small class="text-muted">@(device.SysName ?? "Brak nazwy SNMP")</small>
+                            <small class="text-muted">
+                                @(string.IsNullOrEmpty(device.SysName) ? "Urządzenie bez agenta SNMP" : device.SysName)
+                            </small>
                         </td>
                         <td><code class="text-primary fw-bold">@device.IpAddress</code></td>
-                        <td>
-                            @(device.PingResponseTimeMs.HasValue ? $"{device.PingResponseTimeMs} ms" : "---")
-                        </td>
+                        <td>@(device.PingResponseTimeMs.HasValue ? $"{device.PingResponseTimeMs} ms" : "---")</td>
                         <td><small>@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
                     </tr>
 
@@ -138,30 +153,40 @@ else
                                         <div class="col-md-4 border-end">
                                             <h6 class="fw-bold text-primary border-bottom pb-1">
                                                 <i class="bi bi-info-square"></i> Dane Systemowe
-                                                @if (string.IsNullOrEmpty(device.SysUpTime))
-                                                {
-                                                    <small class="text-danger float-end">(Historyczne)</small>
-                                                }
                                             </h6>
-                                            <p class="mb-1"><strong>Nazwa SNMP:</strong> @(device.SysName ?? "---")</p>
-                                            <p class="mb-1"><strong>Lokalizacja:</strong> @(device.SysLocation ?? "---")</p>
-                                            <p class="mb-1"><strong>Kontakt:</strong> @(device.SysContact ?? "---")</p>
+                                            <p class="mb-1"><strong>Nazwa SNMP:</strong> @(device.SysName ?? "Brak danych")</p>
+                                            <p class="mb-1"><strong>Lokalizacja:</strong> @(device.SysLocation ?? "Nieznana")</p>
+                                            <p class="mb-1"><strong>Kontakt:</strong> @(device.SysContact ?? "Brak")</p>
                                         </div>
                                         <div class="col-md-4 border-end">
                                             <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-activity"></i> Status Pracy</h6>
                                             <p class="mb-1">
                                                 <strong>UpTime:</strong>
-                                                <span class="@(string.IsNullOrEmpty(device.SysUpTime) ? "text-danger" : "text-success")">
-                                                    @(device.SysUpTime ?? "Offline")
+                                                <span class="@(string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "Brak danych" ? "text-muted" : "text-success")">
+                                                    @(device.SysUpTime ?? "Niedostępny")
                                                 </span>
                                             </p>
                                             <p class="mb-1"><strong>Interfejsy:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
                                             <p class="mb-1"><strong>Ostatni Ping:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
                                         </div>
                                         <div class="col-md-4">
-                                            <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Opis urządzenia</h6>
-                                            <small class="text-muted d-block">
-                                                @(device.SysDescr ?? "Brak danych SNMP.")
+                                            <h6 class="fw-bold text-primary border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Komunikat</h6>
+                                            <small class="text-muted">
+                                                @if (string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "Brak danych")
+                                                {
+                                                    if (device.PingResponseTimeMs.HasValue)
+                                                    {
+                                                        <span>Urządzenie aktywne (Ping OK). Brak obsługi SNMP lub usługa jest wyłączona (standardowe dla telefonów/PC).</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Urządzenie nieosiągalne. Sprawdź zasilanie i połączenie sieciowe.</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    @(device.SysDescr ?? "Pobrano pełny opis systemowy SNMP.")
+                                                }
                                             </small>
                                         </div>
                                     </div>
@@ -201,7 +226,7 @@ else
     private async Task LoadData()
     {
         try { devices = await ApiClient.GetDevicesAsync(); }
-        catch (Exception ex) { Console.WriteLine($"Błąd: {ex.Message}"); }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
     }
 
     public async ValueTask DisposeAsync()
