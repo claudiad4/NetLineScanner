@@ -6,34 +6,52 @@
 
 <PageTitle>Dodaj Urządzenie</PageTitle>
 
-<h1>Dodaj nowe urządzenie</h1>
+@* Kontener centrujący na środku ekranu *@
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card p-4 shadow-sm" style="width: 100%; max-width: 450px;">
+        <h3 class="mb-4 text-center">Dodaj nowe urządzenie</h3>
 
-<div class="card p-3" style="max-width: 400px;">
-    <div class="mb-3">
-        <label class="form-label">Adres IP</label>
-        <input @bind="ip" class="form-control" placeholder="np. 192.168.1.1" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Nazwa własna</label>
-        <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
-    </div>
+        <div class="mb-3">
+            <label class="form-label d-block">Adres IP</label>
+            @* Podział na 4 małe pola z kropkami *@
+            <div class="d-flex align-items-center">
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip1" style="width: 60px;" />
+                <span class="mx-1 fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip2" style="width: 60px;" />
+                <span class="mx-1 fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip3" style="width: 60px;" />
+                <span class="mx-1 fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip4" style="width: 60px;" />
+            </div>
+        </div>
 
-    <button class="btn btn-primary" @onclick="Submit" disabled="@isLoading">
-        @if (isLoading) {
-            <span class="spinner-border spinner-border-sm"></span> <span> Dodawanie urządzenia...</span>
-        } else {
-            <span>Dodaj urządzenie</span>
+        <div class="mb-4">
+            <label class="form-label">Nazwa własna</label>
+            <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
+        </div>
+
+        <button class="btn btn-primary w-100" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading) {
+                <span class="spinner-border spinner-border-sm"></span> <span> Dodawanie urządzenia...</span>
+            } else {
+                <span>Dodaj urządzenie</span>
+            }
+        </button>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3 mb-0">@errorMessage</div>
         }
-    </button>
+    </div>
 </div>
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger mt-3">@errorMessage</div>
-}
-
 @code {
-    private string ip = "";
+    // Rozbicie IP na 4 części dla formularza
+    private string ip1 = "";
+    private string ip2 = "";
+    private string ip3 = "";
+    private string ip4 = "";
+    
     private string label = "";
     private bool isLoading = false;
     private string? errorMessage;
@@ -43,10 +61,12 @@
         isLoading = true;
         errorMessage = null;
         
+        // Złożenie IP z powrotem w jeden ciąg
+        string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
+        
         try 
         {
-            // Próba dodania przez naszego "kelnera"
-            var success = await ApiClient.AddDeviceAsync(ip, label, "Workstation");
+            var success = await ApiClient.AddDeviceAsync(fullIp, label, "Workstation");
             
             if (success) 
             {
