@@ -4,67 +4,69 @@
 @inject DeviceApiClient ApiClient
 @inject NavigationManager Nav
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
 <PageTitle>Dodaj Urządzenie</PageTitle>
 
-@* Kontener centrujący na środku ekranu *@
-<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="card p-4 shadow-sm" style="width: 100%; max-width: 450px;">
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh; padding: 20px;">
+    <div class="card p-4 shadow-sm" style="width: 100%; max-width: 500px;">
         <h3 class="mb-4 text-center">Dodaj nowe urządzenie</h3>
 
         <div class="mb-3">
-            <label class="form-label d-block">Adres IP</label>
-            @* Podział na 4 małe pola z kropkami *@
-            <div class="d-flex align-items-center">
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip1" style="width: 60px;" />
-                <span class="mx-1 fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip2" style="width: 60px;" />
-                <span class="mx-1 fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip3" style="width: 60px;" />
-                <span class="mx-1 fw-bold">.</span>
-                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip4" style="width: 60px;" />
+            <label class="form-label d-block fw-bold">Adres IP</label>
+            <div class="d-flex align-items-center justify-content-between">
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip1" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip2" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip3" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="text" maxlength="3" class="form-control text-center px-1" @bind="ip4" style="width: 70px;" />
             </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Nazwa własna</label>
+            <label class="form-label fw-bold">Nazwa własna</label>
             <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
         </div>
 
         <div class="mb-4">
-            <label class="form-label">Rodzaj urządzenia</label>
+            <label class="form-label fw-bold">Rodzaj urządzenia</label>
             <select class="form-select" @bind="deviceType">
                 <option value="Komputer">Komputer</option>
                 <option value="Serwer">Serwer</option>
                 <option value="Switch">Switch</option>
                 <option value="Drukarka">Drukarka</option>
-                <option value="Other">Inne</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Telefon">Telefon</option>
+                <option value="Tablet">Tablet</option>
+                <option value="Inne">Inne</option>
             </select>
         </div>
 
-        <button class="btn btn-primary w-100" @onclick="Submit" disabled="@isLoading">
-            @if (isLoading) {
-                <span class="spinner-border spinner-border-sm"></span> <span> Dodawanie urządzenia...</span>
-            } else {
+        <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="Submit" disabled="@isLoading" style="background-color: #6f42c1; border-color: #6f42c1;">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+                <span> Dodawanie...</span>
+            }
+            else
+            {
                 <span>Dodaj urządzenie</span>
             }
         </button>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <div class="alert alert-danger mt-3 mb-0">@errorMessage</div>
+            <div class="alert alert-danger mt-3">@errorMessage</div>
         }
     </div>
 </div>
 
 @code {
-    // Rozbicie IP na 4 części dla formularza
-    private string ip1 = "";
-    private string ip2 = "";
-    private string ip3 = "";
-    private string ip4 = "";
-    
+    private string ip1 = ""; private string ip2 = ""; private string ip3 = ""; private string ip4 = "";
     private string label = "";
-    private string deviceType = "Komputer"; // Domyślna wartość
+    private string deviceType = "Komputer";
     private bool isLoading = false;
     private string? errorMessage;
 
@@ -72,29 +74,28 @@
     {
         isLoading = true;
         errorMessage = null;
-        
-        // Złożenie IP z powrotem w jeden ciąg
         string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
-        
-        try 
+
+        try
         {
-            // Przekazujemy wybraną wartość deviceType do API
+            // Wysyłamy po prostu wybrany typ z listy.
+            // Dzięki logice w Devices.razor, ikona dobierze się sama.
             var success = await ApiClient.AddDeviceAsync(fullIp, label, deviceType);
-            
-            if (success) 
+
+            if (success)
             {
                 Nav.NavigateTo("/devices");
-            } 
-            else 
+            }
+            else
             {
-                errorMessage = "Serwer nie mógł dodać urządzenia. Sprawdź czy IP jest poprawne.";
+                errorMessage = "Błąd zapisu na serwerze.";
             }
         }
         catch (Exception ex)
         {
             errorMessage = "Błąd połączenia: " + ex.Message;
         }
-        finally 
+        finally
         {
             isLoading = false;
         }
