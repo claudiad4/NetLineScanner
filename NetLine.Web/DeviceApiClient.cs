@@ -8,8 +8,6 @@ public class DeviceApiClient(HttpClient httpClient)
         => await httpClient.GetFromJsonAsync<List<DeviceInfo>>("api/devices") ?? [];
 
     public async Task<bool> AddDeviceAsync(string ip, string label, string type)
-    {
-        var response = await httpClient.PostAsync($"api/devices?ip={ip}&userLabel={label}&type={type}", null);
-        return response.IsSuccessStatusCode;
-    }
+        => (await httpClient.PostAsync($"api/devices?ip={ip}&userLabel={label}&type={type}", null))
+           .IsSuccessStatusCode;
 }
