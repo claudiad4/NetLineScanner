@@ -24,8 +24,6 @@ public class DeviceInfo
     public string? SysDescr { get; set; }
     public string? SysLocation { get; set; }
     public string? SysContact { get; set; }
-
-    // --- NOWE Dane SNMP (Krok w stronę szczegółów) ---
     public string? SysUpTime { get; set; }      // Czas od ostatniego restartu
     public int? SysInterfacesCount { get; set; }   // Ile kart sieciowych ma urządzenie
 

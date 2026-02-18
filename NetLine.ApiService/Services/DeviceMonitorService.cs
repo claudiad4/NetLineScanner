@@ -60,7 +60,7 @@ public class DeviceMonitorService : BackgroundService
                             device.Status = scan.PingResponseTimeMs.HasValue ? "Limited" : "Offline";
 
                             // ==================================================================
-                            // START WYJĄTKU DO TESTÓW:
+                            // WYJĄTEK DO TESTÓW:
                             // Jeżeli SNMP nie działa, ale Ping wynosi dokładnie 1 ms -> Offline
                             // DODATKOWO: Ukrywamy Ping, aby labelka ICMP zgasła na froncie
                             // ==================================================================
@@ -72,7 +72,7 @@ public class DeviceMonitorService : BackgroundService
                             // ==================================================================
                             // KONIEC WYJĄTKU
 
-                            // KLUCZOWE: Czyścimy tylko UpTime. 
+                            // Czyścimy tylko UpTime. 
                             // Dzięki temu wiemy na froncie, że SNMP nie odpowiedziało, 
                             // ale SysName, Location i Contact zostają w bazie jako dane historyczne.
                             device.SysUpTime = null;
