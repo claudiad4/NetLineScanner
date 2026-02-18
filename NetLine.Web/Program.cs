@@ -4,15 +4,15 @@ using NetLine.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-
-// Rejestracja klienta - wzorzec Weather
-builder.Services.AddHttpClient<DeviceApiClient>(client =>
-{
-    client.BaseAddress = new Uri("https://apiservice");
-});
+builder.AddRedisOutputCache("cache");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddHttpClient<DeviceApiClient>(client =>
+{
+    client.BaseAddress = new("https+http://apiservice");
+});
 
 var app = builder.Build();
 
