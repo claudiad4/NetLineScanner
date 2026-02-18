@@ -1,4 +1,4 @@
-﻿using NetLine.Domain;
+﻿using NetLine.Domain.Entities;
 
 namespace NetLine.Web.Services;
 

@@ -1,7 +1,7 @@
 ﻿namespace NetLine.ApiService.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using NetLine.Application.Interfaces;
-using NetLine.Domain;
+using NetLine.Domain.Entities;
 using NetLine.Infrastructure.Data;
 
     public static class DeviceEndpoints
