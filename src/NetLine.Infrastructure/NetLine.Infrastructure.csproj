@@ -6,6 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\NetLine.Domain\NetLine.Domain.csproj" />
+		<ProjectReference Include="..\NetLine.Application\NetLine.Application.csproj" />
+	</ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Lextm.SharpSnmpLib" Version="12.5.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.12">

@@ -2,32 +2,32 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36717.8
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.AppHost", "NetLine.AppHost\NetLine.AppHost.csproj", "{7FEAC8CE-0A24-4EC7-9661-A611344D558E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.AppHost", "src\NetLine.AppHost\NetLine.AppHost.csproj", "{7FEAC8CE-0A24-4EC7-9661-A611344D558E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.ServiceDefaults", "NetLine.ServiceDefaults\NetLine.ServiceDefaults.csproj", "{986647EC-23BE-E9FA-C755-8D8365614D91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.ServiceDefaults", "src\NetLine.ServiceDefaults\NetLine.ServiceDefaults.csproj", "{986647EC-23BE-E9FA-C755-8D8365614D91}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.ApiService", "NetLine.ApiService\NetLine.ApiService.csproj", "{0797593C-AE72-1415-B129-070536586A42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.ApiService", "src\NetLine.ApiService\NetLine.ApiService.csproj", "{0797593C-AE72-1415-B129-070536586A42}"
 	ProjectSection(ProjectDependencies) = postProject
 		{413F2AAF-A4CF-46F4-A410-6614AC1B975F} = {413F2AAF-A4CF-46F4-A410-6614AC1B975F}
 		{68E70DED-29FB-42F1-AF43-2C9CF2123827} = {68E70DED-29FB-42F1-AF43-2C9CF2123827}
 		{A015FC89-BD6D-4136-9F8A-816151DB9D0C} = {A015FC89-BD6D-4136-9F8A-816151DB9D0C}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Web", "NetLine.Web\NetLine.Web.csproj", "{F5AB5E93-209C-7B5D-6E7B-7F2852D160E2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Web", "src\NetLine.Web\NetLine.Web.csproj", "{F5AB5E93-209C-7B5D-6E7B-7F2852D160E2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Infrastructure", "NetLine.Infrastructure\NetLine.Infrastructure.csproj", "{A015FC89-BD6D-4136-9F8A-816151DB9D0C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Infrastructure", "src\NetLine.Infrastructure\NetLine.Infrastructure.csproj", "{A015FC89-BD6D-4136-9F8A-816151DB9D0C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{413F2AAF-A4CF-46F4-A410-6614AC1B975F} = {413F2AAF-A4CF-46F4-A410-6614AC1B975F}
 		{68E70DED-29FB-42F1-AF43-2C9CF2123827} = {68E70DED-29FB-42F1-AF43-2C9CF2123827}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Domain", "NetLine.Domain\NetLine.Domain.csproj", "{68E70DED-29FB-42F1-AF43-2C9CF2123827}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Domain", "src\NetLine.Domain\NetLine.Domain.csproj", "{68E70DED-29FB-42F1-AF43-2C9CF2123827}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Application", "NetLine.Application\NetLine.Application.csproj", "{413F2AAF-A4CF-46F4-A410-6614AC1B975F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLine.Application", "src\NetLine.Application\NetLine.Application.csproj", "{413F2AAF-A4CF-46F4-A410-6614AC1B975F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{43CA899A-7812-4202-BE22-81A81BD96817}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EE47C6EA-8BE4-437F-B591-5DC116AB83F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,7 +67,16 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7FEAC8CE-0A24-4EC7-9661-A611344D558E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{986647EC-23BE-E9FA-C755-8D8365614D91} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{0797593C-AE72-1415-B129-070536586A42} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{F5AB5E93-209C-7B5D-6E7B-7F2852D160E2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{A015FC89-BD6D-4136-9F8A-816151DB9D0C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{68E70DED-29FB-42F1-AF43-2C9CF2123827} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{413F2AAF-A4CF-46F4-A410-6614AC1B975F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {C8AE88E8-0479-4680-ACF5-3B41B7F6C062}
+		SolutionGuid = {E0431C51-667F-4380-AA29-105A50F30E59}
 	EndGlobalSection
 EndGlobal
