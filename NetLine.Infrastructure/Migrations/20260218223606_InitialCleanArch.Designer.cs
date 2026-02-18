@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using NetLine.ApiService.Data;
+using NetLine.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace NetLine.ApiService.Migrations
+namespace NetLine.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218223606_InitialCleanArch")]
+    partial class InitialCleanArch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,7 +25,7 @@ namespace NetLine.ApiService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("NetLine.ApiService.Models.DeviceInfo", b =>
+            modelBuilder.Entity("NetLine.Domain.DeviceInfo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -33,9 +36,6 @@ namespace NetLine.ApiService.Migrations
                     b.Property<string>("DeviceType")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int?>("InterfacesCount")
-                        .HasColumnType("integer");
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
@@ -56,6 +56,9 @@ namespace NetLine.ApiService.Migrations
 
                     b.Property<string>("SysDescr")
                         .HasColumnType("text");
+
+                    b.Property<int?>("SysInterfacesCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SysLocation")
                         .HasColumnType("text");

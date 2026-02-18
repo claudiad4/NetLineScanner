@@ -2,21 +2,18 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using NetLine.ApiService.Data;
+using NetLine.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace NetLine.ApiService.Migrations
+namespace NetLine.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260212184435_CreateDeviceInfoTable")]
-    partial class CreateDeviceInfoTable
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,7 +22,7 @@ namespace NetLine.ApiService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("NetLine.ApiService.Models.DeviceInfo", b =>
+            modelBuilder.Entity("NetLine.Domain.DeviceInfo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -57,10 +54,16 @@ namespace NetLine.ApiService.Migrations
                     b.Property<string>("SysDescr")
                         .HasColumnType("text");
 
+                    b.Property<int?>("SysInterfacesCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("SysLocation")
                         .HasColumnType("text");
 
                     b.Property<string>("SysName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SysUpTime")
                         .HasColumnType("text");
 
                     b.Property<string>("UserDefinedName")

@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NetLine.ApiService.Models;
+using NetLine.Domain;
 
-namespace NetLine.ApiService.Data;
+namespace NetLine.Infrastructure.Data;
 
 public class AppDbContext : DbContext
 {

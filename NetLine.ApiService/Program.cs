@@ -1,34 +1,44 @@
 using Microsoft.EntityFrameworkCore;
-using NetLine.ApiService.Data;
-using NetLine.ApiService.Hubs;
-using NetLine.ApiService.Models;
-using NetLine.ApiService.Services;
+using NetLine.Infrastructure.Data;       // Baza danych (Infrastructure)
+using NetLine.Infrastructure.Services;   // Implementacja SNMP (Infrastructure)
+using NetLine.Application.Interfaces;    // Interfejs SNMP (Application)
+using NetLine.ApiService.Hubs;           // SignalR Hubs (ApiService)
+using NetLine.ApiService.Services;       // Background Service (ApiService)
+using NetLine.ApiService.Endpoints;      // Wydzielone Endpointy (ApiService)
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- 1. REJESTRACJA US£UG (Dependency Injection) ---
+
+// Domyœlne ustawienia Aspire
 builder.AddServiceDefaults();
 
-// Rejestracja bazy danych Postgres
+// Baza danych PostgreSQL (korzysta z AppDbContext w Infrastructure)
 builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
 
-// Rejestracja Twojego nowego serwisu SNMP
-builder.Services.AddSingleton<SnmpService>();
+// Rejestracja serwisu SNMP zgodnie z Clean Architecture
+// Mówimy: "Gdy potrzebny jest ISnmpService, u¿yj implementacji SnmpService z Infrastructure"
+builder.Services.AddSingleton<ISNMPService, SnmpService>();
+
+// Serwis monitoruj¹cy w tle (Hosted Service)
 builder.Services.AddHostedService<DeviceMonitorService>();
 
+// Pozosta³e us³ugi (SignalR, Swagger)
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// --- 2. INICJALIZACJA BAZY DANYCH ---
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await context.Database.EnsureCreatedAsync(); // To stworzy tabelê deviceinfo automatycznie
+    // Tworzy bazê, jeœli nie istnieje (w produkcji lepiej u¿ywaæ Migracji)
+    await context.Database.EnsureCreatedAsync();
 }
 
-// --- 2. KONFIGURACJA ŒRODOWISKA ---
+// --- 3. KONFIGURACJA POTOKU HTTP (Middleware) ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -37,68 +47,16 @@ if (app.Environment.IsDevelopment())
 
 app.MapDefaultEndpoints();
 
-// --- 3. ENDPOINTY (Logika Twoich ekranów) ---
+// --- 4. MAPOWANIE ENDPOINTÓW ---
+
+// SignalR Hub
 app.MapHub<DeviceHub>("/devicehub");
 
-// Testowy endpoint powitalny
+// Prosty test
 app.MapGet("/", () => "NetLine API - System Monitorowania SNMP gotowy.");
 
-// EKRAN 1: Skanowanie IP (zanim dodamy do bazy)
-// U¿ycie: GET /api/scan/127.0.0.1
-app.MapGet("/api/scan/{ip}", async (string ip, SnmpService snmp) =>
-{
-    var result = await snmp.GetDeviceInfoAsync(ip);
-
-    if (result.Success)
-    {
-        return Results.Ok(result);
-    }
-
-    return Results.NotFound(new
-    {
-        error = "Urz¹dzenie nie odpowiedzia³o",
-        details = result.ErrorMessage
-    });
-});
-
-// EKRAN 2: Lista urz¹dzeñ zapisanych w bazie
-app.MapGet("/api/devices", async (AppDbContext db) =>
-{
-    return await db.DevicesInfo.ToListAsync();
-});
-
-// EKRAN 1: Zapisywanie urz¹dzenia do bazy (KROK NA PRZYSZ£OŒÆ)
-app.MapPost("/api/devices", async (string ip, string userLabel, string type, AppDbContext db, SnmpService snmp) =>
-{
-    // 1. SprawdŸ, czy IP ju¿ istnieje
-    var existing = await db.DevicesInfo.AnyAsync(d => d.IpAddress == ip);
-    if (existing) return Results.BadRequest("Urz¹dzenie o tym IP ju¿ jest w bazie!");
-
-    // 2. Automatyczne skanowanie SNMP przed zapisem
-    var scan = await snmp.GetDeviceInfoAsync(ip);
-
-    // 3. Tworzenie obiektu na podstawie skanu i danych od u¿ytkownika
-    var newDevice = new DeviceInfo
-    {
-        IpAddress = ip,
-        UserDefinedName = userLabel,
-        DeviceType = type,
-        Status = scan.Success ? "Online" : "Offline",
-        PingResponseTimeMs = scan.PingResponseTimeMs,
-
-        // Dane pobrane automatycznie z SNMP
-        SysName = scan.Name ?? "Brak nazwy",
-        SysDescr = scan.Description ?? "Brak opisu",
-        SysLocation = scan.Location ?? "Nieznana",
-        SysContact = scan.Contact ?? "Brak kontaktu",
-
-        LastScanned = DateTime.UtcNow
-    };
-
-    db.DevicesInfo.Add(newDevice);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"/api/devices/{newDevice.Id}", newDevice);
-});
+// Wszystkie endpointy zwi¹zane z urz¹dzeniami (Scan, Get, Add)
+// przeniesione do pliku Endpoints/DeviceEndpoints.cs
+app.MapDeviceEndpoints();
 
 app.Run();

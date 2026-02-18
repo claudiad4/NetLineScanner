@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NetLine.ApiService.Models;
+namespace NetLine.Domain;
 
 [Table("deviceinfo")]
 public class DeviceInfo

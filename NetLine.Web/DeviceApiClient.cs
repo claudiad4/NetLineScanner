@@ -1,4 +1,4 @@
-﻿using NetLine.ApiService.Models;
+﻿using NetLine.Domain;
 
 namespace NetLine.Web.Services;
 

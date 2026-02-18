@@ -1,7 +1,10 @@
-﻿using NetLine.ApiService.Data;
-using NetLine.ApiService.Hubs;
+﻿using NetLine.ApiService.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+// --- NOWE USINGI ---
+using NetLine.Domain.Models;           // Widzi modele
+using NetLine.Application.Interfaces;  // Widzi interfejs ISnmpService
+using NetLine.Infrastructure.Data;     // Widzi AppDbContext
 
 namespace NetLine.ApiService.Services;
 
@@ -33,19 +36,24 @@ public class DeviceMonitorService : BackgroundService
                 using (var scope = _serviceProvider.CreateScope())
                 {
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    var snmpService = scope.ServiceProvider.GetRequiredService<SnmpService>();
+
+                    // --- ZMIANA: Pobieramy INTERFEJS, nie konkretną klasę ---
+                    var snmpService = scope.ServiceProvider.GetRequiredService<ISNMPService>();
 
                     var devices = await db.DevicesInfo.ToListAsync(stoppingToken);
 
                     foreach (var device in devices)
                     {
+                        // Tutaj wywołujemy metodę z interfejsu - kod wygląda tak samo, 
+                        // ale pod spodem działa nowa architektura
                         var scan = await snmpService.GetDeviceInfoAsync(device.IpAddress);
+
                         device.PingResponseTimeMs = scan.PingResponseTimeMs;
                         device.LastScanned = DateTime.UtcNow;
 
                         if (scan.Success)
                         {
-                            // Aktualizacja wszystkich danych
+                            // Aktualizacja danych SNMP
                             device.Status = "Online";
                             device.SysName = scan.Name;
                             device.SysDescr = scan.Description;
@@ -56,25 +64,16 @@ public class DeviceMonitorService : BackgroundService
                         }
                         else
                         {
-                            // Jeśli SNMP zawiedzie, ustawiamy status na podstawie Pinga
+                            // Logika offline/limited
                             device.Status = scan.PingResponseTimeMs.HasValue ? "Limited" : "Offline";
 
-                            // ==================================================================
-                            // WYJĄTEK DO TESTÓW:
-                            // Jeżeli SNMP nie działa, ale Ping wynosi dokładnie 1 ms -> Offline
-                            // DODATKOWO: Ukrywamy Ping, aby labelka ICMP zgasła na froncie
-                            // ==================================================================
+                            // Specjalny wyjątek dla 1ms (localhost/test)
                             if (scan.PingResponseTimeMs.HasValue && scan.PingResponseTimeMs.Value == 1)
                             {
                                 device.Status = "Offline";
-                                device.PingResponseTimeMs = null; // To "zgasi" labelkę ICMP na zielono
+                                device.PingResponseTimeMs = null;
                             }
-                            // ==================================================================
-                            // KONIEC WYJĄTKU
 
-                            // Czyścimy tylko UpTime. 
-                            // Dzięki temu wiemy na froncie, że SNMP nie odpowiedziało, 
-                            // ale SysName, Location i Contact zostają w bazie jako dane historyczne.
                             device.SysUpTime = null;
 
                             if (!scan.PingResponseTimeMs.HasValue)
