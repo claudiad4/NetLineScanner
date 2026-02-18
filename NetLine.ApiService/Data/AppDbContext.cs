@@ -11,7 +11,6 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // adres IP powinien być unikalny
         modelBuilder.Entity<DeviceInfo>()
             .HasIndex(d => d.IpAddress)
             .IsUnique();
