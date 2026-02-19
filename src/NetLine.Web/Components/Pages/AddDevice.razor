@@ -6,15 +6,14 @@
 
 <PageTitle>Dodaj Urządzenie</PageTitle>
 
-@* --- STYLE DLA TOASTA I VALIDACJI --- *@
+@* toast and validation*@
 <style>
-    /* Styl powiadomienia (Toast) */
     .custom-toast {
         position: fixed;
         top: 20px;
         right: 20px;
-        background-color: #d1e7dd; /* Jasny zielony */
-        color: #0f5132; /* Ciemny zielony tekst */
+        background-color: #d1e7dd;
+        color: #0f5132; 
         border: 1px solid #badbcc;
         padding: 15px 25px;
         border-radius: 8px;
@@ -26,7 +25,6 @@
         animation: slideIn 0.3s ease-out;
     }
 
-    /* Animacja wjazdu toasta */
     @@keyframes slideIn {
         from {
             transform: translateY(-100%);
@@ -39,7 +37,7 @@
         }
     }
 
-    /* Inputy IP - usunięcie strzałek w Chrome/Edge */
+    /* IP input in form - hide the arrows */
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
         -webkit-appearance: none;
@@ -47,27 +45,27 @@
     }
 </style>
 
-@* --- POWIADOMIENIE SUKCESU --- *@
+
 @if (showSuccessToast)
 {
     <div class="custom-toast">
         <i class="bi bi-check-circle-fill" style="font-size: 1.2rem;"></i>
         <div>
-            <strong>Sukces!</strong><br />
-            Urządzenie dodane pomyślnie.
+            <strong>Success!</strong><br />
+            Device added successfully.
         </div>
     </div>
 }
 
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh; padding: 20px;">
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 500px;">
-        <h3 class="mb-4 text-center">Dodaj nowe urządzenie</h3>
+        <h3 class="mb-4 text-center">Add new device</h3>
 
-        @* --- SEKJA IP --- *@
+        @* IP *@
         <div class="mb-3">
             <label class="form-label d-block fw-bold">Adres IP</label>
             <div class="d-flex align-items-center justify-content-between">
-                @* type="number" blokuje wpisywanie tekstu na mobile, a min/max pomaga w walidacji *@
+                
                 <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" placeholder="192" style="width: 70px;" />
                 <span class="fw-bold">.</span>
                 <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" placeholder="168" style="width: 70px;" />
@@ -79,46 +77,46 @@
             @if (isIpInvalid)
             {
                 <div class="text-danger small mt-1">
-                    <i class="bi bi-exclamation-circle"></i> Wpisz poprawne liczby (0-255).
+                    <i class="bi bi-exclamation-circle"></i> Enter correct numbers. (0-255).
                 </div>
             }
         </div>
 
-        @* --- NAZWA --- *@
+        
         <div class="mb-3">
-            <label class="form-label fw-bold">Nazwa własna</label>
-            <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
+            <label class="form-label fw-bold">Your individual device name</label>
+            <input @bind="label" class="form-control" placeholder="np. Printer in room 112" />
         </div>
 
-        @* --- RODZAJ (LISTA) --- *@
+        
         <div class="mb-4">
-            <label class="form-label fw-bold">Rodzaj urządzenia</label>
+            <label class="form-label fw-bold">Device type</label>
             <select class="form-select" @bind="deviceType">
-                <option value="Komputer">Komputer</option>
+                <option value="Komputer">Computer</option>
                 <option value="Serwer">Serwer</option>
                 <option value="Switch">Switch</option>
-                <option value="Drukarka">Drukarka</option>
+                <option value="Drukarka">Printer</option>
                 <option value="Laptop">Laptop</option>
-                <option value="Telefon">Telefon</option>
+                <option value="Smartphone">Smartphone</option>
                 <option value="Tablet">Tablet</option>
-                <option value="Inne">Inne</option>
+                <option value="Other">Other</option>
             </select>
         </div>
 
-        @* --- PRZYCISK --- *@
+     
         <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="Submit" disabled="@isLoading" style="background-color: #6f42c1; border-color: #6f42c1;">
             @if (isLoading)
             {
                 <span class="spinner-border spinner-border-sm"></span>
-                <span> Zapisywanie...</span>
+                <span> Saving...</span>
             }
             else
             {
-                <span>Dodaj urządzenie</span>
+                <span>Add device</span>
             }
         </button>
 
-        @* --- KOMUNIKAT BŁĘDU (API) --- *@
+       
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger mt-3">@errorMessage</div>
@@ -127,37 +125,35 @@
 </div>
 
 @code {
-    // Zmieniamy typ na string, żeby łatwiej obsługiwać inputy, ale walidujemy jako liczby
+    // fancy form
     private string ip1 = "";
     private string ip2 = "";
     private string ip3 = "";
     private string ip4 = "";
 
     private string label = "";
-    private string deviceType = "Komputer";
+    private string deviceType = "Computer";
 
     private bool isLoading = false;
-    private bool showSuccessToast = false; // Sterowanie tostem
-    private bool isIpInvalid = false;      // Sterowanie błędem walidacji
+    private bool showSuccessToast = false; 
+    private bool isIpInvalid = false;     
     private string? errorMessage;
 
     private async Task Submit()
     {
-        // 1. Reset stanów
         isLoading = true;
         errorMessage = null;
         isIpInvalid = false;
 
-        // 2. Walidacja IP (Sprawdzamy czy to liczby 0-255)
+        // validation - we can add more HERE
         if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
         {
             isIpInvalid = true;
-            errorMessage = "Popraw błędy w adresie IP.";
+            errorMessage = "Correct the number.";
             isLoading = false;
             return;
         }
 
-        // 3. Złożenie adresu IP
         string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
 
         try
@@ -166,29 +162,29 @@
 
             if (success)
             {
-                // 4. POKAŻ SUKCES
+                
                 showSuccessToast = true;
                 isLoading = false;
-                StateHasChanged(); // Odśwież widok, żeby pokazać toast
+                StateHasChanged(); 
 
-                // 5. Czekaj 2 sekundy i przekieruj
+                
                 await Task.Delay(2000);
                 Nav.NavigateTo("/devices");
             }
             else
             {
-                errorMessage = "Serwer odrzucił zapis (sprawdź czy IP nie jest zajęte).";
+                errorMessage = "ERROR: is IP okay?.";
                 isLoading = false;
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "Błąd połączenia: " + ex.Message;
+            errorMessage = "ERROR: " + ex.Message;
             isLoading = false;
         }
     }
 
-    // Metoda pomocnicza do sprawdzania liczb
+    // validation for IP input - only numbers between 0 and 255
     private bool IsValidByte(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return false;

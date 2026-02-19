@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
-//note for devs: when I tried to refactor the code, I messed up the migration history, so I had to delete all migrations and create a new one with the current state of the code.
+//note from Claudia: when I tried to refactor the code, I messed up the migration history, so I had to delete all migrations and create a new one with the current state of the code.
 
 #nullable disable
 

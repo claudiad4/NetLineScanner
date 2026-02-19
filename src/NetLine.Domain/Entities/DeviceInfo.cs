@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetLine.Domain.Entities;
 
-// note for devs: this class is too big, think about splitting it into smaller pieces in the future
+// note for Claudia & Adam: this class is too big, think about splitting it into smaller pieces in the future
 
 [Table("deviceinfo")]
 public class DeviceInfo

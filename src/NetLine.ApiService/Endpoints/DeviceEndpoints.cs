@@ -6,10 +6,10 @@ using NetLine.Infrastructure.Data;
 
     public static class DeviceEndpoints
     {
-        // To jest metoda rozszerzająca (Extension Method)
+        
         public static void MapDeviceEndpoints(this WebApplication app)
         {
-            // EKRAN 1: Skanowanie IP (zanim dodamy do bazy)
+            // IP scanning
             app.MapGet("/api/scan/{ip}", async (string ip, ISNMPService snmp) =>
             {
                 var result = await snmp.GetDeviceInfoAsync(ip);
@@ -21,30 +21,29 @@ using NetLine.Infrastructure.Data;
 
                 return Results.NotFound(new
                 {
-                    error = "Urządzenie nie odpowiedziało",
+                    error = "Device is not responding.",
                     details = result.ErrorMessage
                 });
             })
-            .WithName("ScanDevice"); // Dobra praktyka: nazywanie endpointów
+            .WithName("ScanDevice");
 
-            // EKRAN 2: Lista urządzeń zapisanych w bazie
-            app.MapGet("/api/devices", async (AppDbContext db) =>
+        // List of the devices in the database
+        app.MapGet("/api/devices", async (AppDbContext db) =>
             {
                 return await db.DevicesInfo.ToListAsync();
             })
             .WithName("GetDevices");
 
-            // EKRAN 1: Zapisywanie urządzenia do bazy
+            // Add the device to  the database
             app.MapPost("/api/devices", async (string ip, string userLabel, string type, AppDbContext db, ISNMPService snmp) =>
             {
-                // 1. Sprawdź, czy IP już istnieje
                 var existing = await db.DevicesInfo.AnyAsync(d => d.IpAddress == ip);
-                if (existing) return Results.BadRequest("Urządzenie o tym IP już jest w bazie!");
+                if (existing) return Results.BadRequest("This IP is already in the database.");
 
-                // 2. Automatyczne skanowanie SNMP przed zapisem
+                // SNMP protocol scanning
                 var scan = await snmp.GetDeviceInfoAsync(ip);
 
-                // 3. Tworzenie obiektu
+                
                 var newDevice = new DeviceInfo
                 {
                     IpAddress = ip,
@@ -52,10 +51,10 @@ using NetLine.Infrastructure.Data;
                     DeviceType = type,
                     Status = scan.Success ? "Online" : "Offline",
                     PingResponseTimeMs = scan.PingResponseTimeMs,
-                    SysName = scan.Name ?? "Brak nazwy",
-                    SysDescr = scan.Description ?? "Brak opisu",
-                    SysLocation = scan.Location ?? "Nieznana",
-                    SysContact = scan.Contact ?? "Brak kontaktu",
+                    SysName = scan.Name ?? "Uknown",
+                    SysDescr = scan.Description ?? "Uknown",
+                    SysLocation = scan.Location ?? "Uknown",
+                    SysContact = scan.Contact ?? "Unkown",
                     LastScanned = DateTime.UtcNow
                 };
 

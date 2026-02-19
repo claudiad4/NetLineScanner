@@ -1,6 +1,9 @@
 @ApiService_HostAddress = http://localhost:5417
 
-GET {{ApiService_HostAddress}}/weatherforecast/
-Accept: application/json
+# GET {{ApiService_HostAddress}}/weatherforecast/
+# Accept: application/json
+
+//przyk³adowe zapytanie do endpointu zwracaj¹cego prognozê pogody w formacie JSON
+// nie wiem czy musimy tutaj coœ dodawaæ jak mamy swaggera
 
 ###

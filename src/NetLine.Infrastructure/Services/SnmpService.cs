@@ -31,23 +31,20 @@ public class SnmpService : ISNMPService
 
             if (reply != null && reply.Status == IPStatus.Success)
             {
-                // Czasami RoundtripTime wynosi 0 (localhost), ustawiamy wtedy 1ms
                 result.PingResponseTimeMs = reply.RoundtripTime == 0 ? 1 : reply.RoundtripTime;
-                _logger.LogDebug("Ping udany: {Ms}ms", result.PingResponseTimeMs);
+                _logger.LogDebug("Ping OK: {Ms}ms", result.PingResponseTimeMs);
             }
             else
             {
-                _logger.LogWarning("Urządzenie {IpAddress} nie odpowiada na Ping (Offline).", ipAddress);
+                _logger.LogWarning("Device {IpAddress} is not responding to PING (Offline).", ipAddress);
                 result.Success = false;
-                result.ErrorMessage = "Urządzenie nieosiągalne (Offline).";
-                return result; // Przerywamy skanowanie tutaj
+                result.ErrorMessage = "Device is Offline.";
+                return result; 
             }
         }
         catch (Exception ex)
         {
-            _logger.LogTrace("Błąd podczas pingowania {IpAddress}: {Msg}", ipAddress, ex.Message);
-            // Nie przerywamy, może SNMP mimo wszystko zadziała
-        }
+            _logger.LogTrace("ERROR: {IpAddress}: {Msg}", ipAddress, ex.Message);        }
 
         // --- 2. SNMP  ---
         try
@@ -61,7 +58,7 @@ public class SnmpService : ISNMPService
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.3.0")), // UpTime 
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.2.1.0"))  // IfNumber 
 
-                //we can add more OID HERE
+                //we can add more OIDs HERE
             };
 
             var snmpData = await Task.Run(() => Messenger.Get(

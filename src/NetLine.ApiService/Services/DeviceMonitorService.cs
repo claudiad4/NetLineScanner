@@ -7,6 +7,7 @@ using NetLine.Infrastructure.Data;
 
 namespace NetLine.ApiService.Services;
 
+//this is our background service that will be running in the background and will be checking the status of the devices every 5 seconds and updating the database and sending the updates to the clients via SignalR
 public class DeviceMonitorService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -26,7 +27,7 @@ public class DeviceMonitorService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Monitorowanie urządzeń uruchomione (Logika danych historycznych).");
+        _logger.LogInformation("Device monitoring in progress..");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -36,15 +37,12 @@ public class DeviceMonitorService : BackgroundService
                 {
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                    // --- ZMIANA: Pobieramy INTERFEJS, nie konkretną klasę ---
                     var snmpService = scope.ServiceProvider.GetRequiredService<ISNMPService>();
 
                     var devices = await db.DevicesInfo.ToListAsync(stoppingToken);
 
                     foreach (var device in devices)
                     {
-                        // Tutaj wywołujemy metodę z interfejsu - kod wygląda tak samo, 
-                        // ale pod spodem działa nowa architektura
                         var scan = await snmpService.GetDeviceInfoAsync(device.IpAddress);
 
                         device.PingResponseTimeMs = scan.PingResponseTimeMs;
@@ -52,7 +50,6 @@ public class DeviceMonitorService : BackgroundService
 
                         if (scan.Success)
                         {
-                            // Aktualizacja danych SNMP
                             device.Status = "Online";
                             device.SysName = scan.Name;
                             device.SysDescr = scan.Description;
@@ -63,10 +60,10 @@ public class DeviceMonitorService : BackgroundService
                         }
                         else
                         {
-                            // Logika offline/limited
+                            
                             device.Status = scan.PingResponseTimeMs.HasValue ? "Limited" : "Offline";
 
-                            // Specjalny wyjątek dla 1ms (localhost/test)
+                            // Exception for the testing environment where ping response time is always 1ms, but device is actually offline
                             if (scan.PingResponseTimeMs.HasValue && scan.PingResponseTimeMs.Value == 1)
                             {
                                 device.Status = "Offline";
@@ -88,7 +85,7 @@ public class DeviceMonitorService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Błąd monitoringu: {ex.Message}");
+                _logger.LogError($"ERROR: {ex.Message}");
             }
 
             await Task.Delay(_checkInterval, stoppingToken);

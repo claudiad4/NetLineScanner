@@ -7,7 +7,7 @@
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"> @* icons library *@
 
 <PageTitle>Monitor Urządzeń</PageTitle>
 
@@ -70,15 +70,15 @@
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-speedometer2 text-purple"></i> Monitor Sieciowy</h1>
-    <span class="badge bg-success border shadow-sm p-2">Status: Połączono Live</span>
+    <h1><i class="bi bi-speedometer2 text-purple"></i> Device monitoring</h1>
+    <span class="badge bg-success border shadow-sm p-2">Status: Live</span>
 </div>
 
 @if (devices == null)
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
-        <p class="mt-2 text-muted">Inicjalizacja monitoringu...</p>
+        <p class="mt-2 text-muted">Innitiating monitoring...</p>
     </div>
 }
 else
@@ -89,10 +89,10 @@ else
                 <tr>
                     <th style="width: 40px;"></th>
                     <th style="width: 130px;">Status</th>
-                    <th style="width: 140px;">Protokół</th>
-                    <th>Urządzenie</th>
-                    <th>Adres IP</th>
-                    <th>Ostatni skan</th>
+                    <th style="width: 140px;">Protocol</th>
+                    <th>Device</th>
+                    <th>IP address</th>
+                    <th>Last scanned</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,15 +114,13 @@ else
                         <td>
                             <div class="d-flex gap-1">
                                 <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
-                                <span class="badge @(!string.IsNullOrEmpty(device.SysUpTime) && device.SysUpTime != "Brak danych" ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
+                                <span class="badge @(!string.IsNullOrEmpty(device.SysUpTime) && device.SysUpTime != "No data" ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
                             </div>
                         </td>
                         <td>
-                            <div class="d-flex align-items-center">
-                                @* ZMIANA: Szare kółko (#e9ecef), czarna ikona *@
+                            <div class="d-flex align-items-center"> @* icon in circle *@
                                 <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
                                      style="width: 40px; height: 40px; background-color: #e9ecef; color: black;">
-                                    @* Wyświetlamy ikonę dynamicznie *@
                                     <i class="bi @GetIconForType(device.DeviceType)" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div>
@@ -144,27 +142,27 @@ else
                                 <div class="details-container">
                                     <div class="row">
                                         <div class="col-md-4 border-end">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> Dane Systemowe</h6>
-                                            <p class="mb-1 small"><strong>Nazwa SNMP:</strong> @(device.SysName ?? "Brak danych")</p>
-                                            <p class="mb-1 small"><strong>Lokalizacja:</strong> @(device.SysLocation ?? "Nieznana")</p>
-                                            <p class="mb-1 small"><strong>Kontakt:</strong> @(device.SysContact ?? "Brak")</p>
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> System</h6>
+                                            <p class="mb-1 small"><strong>Name (SNMP):</strong> @(device.SysName ?? "No data")</p>
+                                            <p class="mb-1 small"><strong>Localisation of device:</strong> @(device.SysLocation ?? "No data")</p>
+                                            <p class="mb-1 small"><strong>Person responsible for device:</strong> @(device.SysContact ?? "No data")</p>
                                         </div>
                                         <div class="col-md-4 border-end">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status Pracy</h6>
-                                            <p class="mb-1 small"><strong>UpTime:</strong> @(device.SysUpTime ?? "Niedostępny")</p>
-                                            <p class="mb-1 small"><strong>Interfejsy:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
-                                            <p class="mb-1 small"><strong>Ostatni Ping:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status</h6>
+                                            <p class="mb-1 small"><strong>UpTime:</strong> @(device.SysUpTime ?? "No data")</p>
+                                            <p class="mb-1 small"><strong>Interfaces:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
+                                            <p class="mb-1 small"><strong>Last PING:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
                                         </div>
                                         <div class="col-md-4">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Komunikat</h6>
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Other info</h6>
                                             <small class="text-muted" style="font-size: 0.75rem;">
-                                                @if (string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "Brak danych")
+                                                @if (string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "No data")
                                                 {
-                                                    <span>@(device.PingResponseTimeMs.HasValue ? "Urządzenie aktywne (Ping OK). Brak obsługi SNMP." : "Urządzenie nieosiągalne.")</span>
+                                                    <span>@(device.PingResponseTimeMs.HasValue ? "Ping OK, SNMP not working." : "Device is unreachable.")</span>
                                                 }
                                                 else
                                                 {
-                                                    @(device.SysDescr ?? "Pobrano opis SNMP.")
+                                                    @(device.SysDescr ?? "SNMP Data.")
                                                 }
                                             </small>
                                         </div>
@@ -186,21 +184,21 @@ else
 
     private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
 
-    // Metoda elastyczna: sprawdza czy typ ma przypisaną ikonę.
-    // Jeśli nie, zakłada że 'type' to nazwa ikony (np. "laptop", "phone").
+ //match name of the device to icon
     private string GetIconForType(string? type)
     {
         if (string.IsNullOrEmpty(type)) return "bi-three-dots";
 
         return type switch
         {
-            "Komputer" => "bi-pc-display",
+            "Computer" => "bi-pc-display",
+            "Laptop" => "bi-laptop",
             "Serwer" => "bi-hdd-network",
             "Switch" => "bi-router",
-            "Drukarka" => "bi-printer",
-            "Inne" => "bi-three-dots",
-            // Jeśli typ nie pasuje do powyższych, użyj typu jako nazwy ikony (np. bi-laptop)
-            _ => $"bi-{type.ToLower()}"
+            "Print" => "bi-printer",
+            "Smartphone" => "bi-phone",
+            "Tablet" => "bi-tablet",
+            "Other" => "bi-three-dots",
         };
     }
 
@@ -227,7 +225,7 @@ else
     private async Task LoadData()
     {
         try { devices = await ApiClient.GetDevicesAsync(); }
-        catch (Exception ex) { Console.WriteLine($"Błąd: {ex.Message}"); }
+        catch (Exception ex) { Console.WriteLine($"ERROR: {ex.Message}"); }
     }
 
     public async ValueTask DisposeAsync() { if (hubConnection is not null) await hubConnection.DisposeAsync(); }
