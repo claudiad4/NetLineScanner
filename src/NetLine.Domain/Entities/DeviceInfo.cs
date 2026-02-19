@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetLine.Domain.Entities;
 
+// note for devs: this class is too big, think about splitting it into smaller pieces in the future
+
 [Table("deviceinfo")]
 public class DeviceInfo
 {
@@ -19,13 +21,12 @@ public class DeviceInfo
     public string Status { get; set; } = "Offline";
     public long? PingResponseTimeMs { get; set; }
 
-    // --- Dane podstawowe SNMP ---
     public string? SysName { get; set; }
     public string? SysDescr { get; set; }
     public string? SysLocation { get; set; }
     public string? SysContact { get; set; }
-    public string? SysUpTime { get; set; }      // Czas od ostatniego restartu
-    public int? SysInterfacesCount { get; set; }   // Ile kart sieciowych ma urządzenie
+    public string? SysUpTime { get; set; }     
+    public int? SysInterfacesCount { get; set; }   
 
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
 }

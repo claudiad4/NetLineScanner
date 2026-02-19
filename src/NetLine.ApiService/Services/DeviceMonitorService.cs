@@ -1,10 +1,9 @@
 ﻿using NetLine.ApiService.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-// --- NOWE USINGI ---
-using NetLine.Domain.Models;           // Widzi modele
-using NetLine.Application.Interfaces;  // Widzi interfejs ISnmpService
-using NetLine.Infrastructure.Data;     // Widzi AppDbContext
+using NetLine.Domain.Models;          
+using NetLine.Application.Interfaces;  
+using NetLine.Infrastructure.Data;     
 
 namespace NetLine.ApiService.Services;
 

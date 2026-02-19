@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Microsoft.Extensions.Logging;
@@ -20,13 +21,12 @@ public class SnmpService : ISNMPService
     public async Task<SNMPScanResult> GetDeviceInfoAsync(string ipAddress)
     {
         var result = new SNMPScanResult();
-        _logger.LogInformation("Rozpoczynam skanowanie dla IP: {IpAddress}", ipAddress);
+        _logger.LogInformation("Starting scanning for IP: {IpAddress}", ipAddress);
 
-        // --- 1. PING (Szybkie sprawdzenie czy host żyje) ---
+        // --- 1. PING (IMCP) ---
         try
         {
             using var ping = new Ping();
-            // Krótki timeout dla pinga (1s), żeby nie blokować aplikacji
             var reply = await ping.SendPingAsync(ipAddress, 1000);
 
             if (reply != null && reply.Status == IPStatus.Success)
@@ -49,7 +49,7 @@ public class SnmpService : ISNMPService
             // Nie przerywamy, może SNMP mimo wszystko zadziała
         }
 
-        // --- 2. SNMP (Pobieranie szczegółów) ---
+        // --- 2. SNMP  ---
         try
         {
             var variables = new List<Variable>
@@ -60,15 +60,16 @@ public class SnmpService : ISNMPService
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.4.0")), // Contact
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.1.3.0")), // UpTime 
                 new Variable(new ObjectIdentifier(".1.3.6.1.2.1.2.1.0"))  // IfNumber 
+
+                //we can add more OID HERE
             };
 
-            // Używamy Task.Run, bo biblioteka Lextm bywa blokująca (sync)
             var snmpData = await Task.Run(() => Messenger.Get(
-                VersionCode.V2,
+                VersionCode.V2, //SNMP version 2c
                 new IPEndPoint(IPAddress.Parse(ipAddress), 161),
                 new OctetString("public"),
                 variables,
-                2000)); // 2 sekundy timeoutu na SNMP
+                2000));
 
             if (snmpData != null && snmpData.Count > 0)
             {
@@ -84,20 +85,20 @@ public class SnmpService : ISNMPService
                     result.InterfacesCount = ifCount;
                 }
 
-                _logger.LogInformation("Skanowanie SNMP zakończone sukcesem dla {IpAddress}", ipAddress);
+                _logger.LogInformation("Scanning was successful for {IpAddress}", ipAddress);
             }
         }
         catch (Lextm.SharpSnmpLib.Messaging.TimeoutException)
         {
-            _logger.LogWarning("Timeout SNMP dla {IpAddress}. Urządzenie jest w sieci, ale SNMP nie odpowiada.", ipAddress);
+            _logger.LogWarning("Timeout SNMP for {IpAddress}. Device is online but SNMP is not working.", ipAddress);
             result.Success = false;
-            result.ErrorMessage = "Brak odpowiedzi SNMP (Timeout).";
+            result.ErrorMessage = "No answer from SNMP (Timeout).";
         }
         catch (Exception ex)
         {
-            _logger.LogError("Błąd krytyczny SNMP dla {IpAddress}: {Message}", ipAddress, ex.Message);
+            _logger.LogError("SNMP CRITICAL ERROR {IpAddress}: {Message}", ipAddress, ex.Message);
             result.Success = false;
-            result.ErrorMessage = "Błąd komunikacji SNMP.";
+            result.ErrorMessage = "SNMP ERROR";
         }
 
         return result;
