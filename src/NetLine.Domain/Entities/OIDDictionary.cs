@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NetLine.Domain.Entities
 {
-    internal class OIDDictionary
+    public class OIDDictionary
     {
 
             // System Group (RFC 1213)
