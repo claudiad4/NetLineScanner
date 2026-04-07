@@ -13,6 +13,8 @@ builder.AddServiceDefaults();
 builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
 
 builder.Services.AddSingleton<ISNMPService, SnmpService>();
+builder.Services.AddSingleton<IICMPService, ICMPService>();
+
 
 builder.Services.AddHostedService<DeviceMonitorService>();
 

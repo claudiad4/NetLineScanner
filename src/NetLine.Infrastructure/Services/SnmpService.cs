@@ -4,7 +4,7 @@ using Lextm.SharpSnmpLib.Messaging;
 using Microsoft.Extensions.Logging;
 using NetLine.Application.Interfaces;
 using NetLine.Domain.Models;
-using NetLine.Domain.Entities; // Pamiętaj o dodaniu tego namespace
+using NetLine.Domain.Entities;
 
 namespace NetLine.Infrastructure.Services;
 
@@ -65,6 +65,14 @@ public class SnmpService : ISNMPService
             result.Success = false;
             result.ErrorMessage = "SNMP Timeout";
         }
+
+        catch (System.Net.Sockets.SocketException ex) when (ex.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionReset)
+        {
+            _logger.LogInformation("SNMP connection refused by {IpAddress} (Agent is probably off).", ipAddress);
+            result.Success = false;
+            result.ErrorMessage = "SNMP Agent Offline";
+        }
+
         catch (Exception ex)
         {
             _logger.LogError(ex, "SNMP error for {IpAddress}", ipAddress);

@@ -1,13 +1,12 @@
-ï»¿using NetLine.ApiService.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using NetLine.Domain.Models;          
-using NetLine.Application.Interfaces;  
-using NetLine.Infrastructure.Data;     
+using NetLine.ApiService.Hubs;
+using NetLine.Application.Interfaces;
+using NetLine.Infrastructure.Data;
+using NetLine.Infrastructure.Services;
 
 namespace NetLine.ApiService.Services;
 
-//this is our background service that will be running in the background and will be checking the status of the devices every 5 seconds and updating the database and sending the updates to the clients via SignalR
 public class DeviceMonitorService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -27,67 +26,102 @@ public class DeviceMonitorService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Device monitoring in progress..");
+        _logger.LogInformation("Device monitoring started.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                using (var scope = _serviceProvider.CreateScope())
+                using var scope = _serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var snmpService = scope.ServiceProvider.GetRequiredService<ISNMPService>();
+                var pingService = scope.ServiceProvider.GetRequiredService<IICMPService>();
+
+                // 1. Pobieramy listê urz¹dzeñ
+                var devices = await db.DevicesInfo.ToListAsync(stoppingToken);
+
+                // 2. RÓWNOLEG£E SKANOWANIE SIECI
+                // Zamiast czekaæ na ka¿de urz¹dzenie po kolei, odpalamy Ping i SNMP dla wszystkich naraz!
+                var scanTasks = devices.Select(async device =>
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var pingTask = pingService.GetPingResponseTimeAsync(device.IpAddress);
+                    var snmpTask = snmpService.GetDeviceInfoAsync(device.IpAddress);
 
-                    var snmpService = scope.ServiceProvider.GetRequiredService<ISNMPService>();
+                    await Task.WhenAll(pingTask, snmpTask); // Czekamy a¿ oba skany dla TEGO urz¹dzenia siê skoñcz¹
 
-                    var devices = await db.DevicesInfo.ToListAsync(stoppingToken);
-
-                    foreach (var device in devices)
+                    return new
                     {
-                        var scan = await snmpService.GetDeviceInfoAsync(device.IpAddress);
+                        Device = device,
+                        PingTime = await pingTask,
+                        SnmpScan = await snmpTask
+                    };
+                }).ToList();
 
-                        device.PingResponseTimeMs = scan.PingResponseTimeMs;
-                        device.LastScanned = DateTime.UtcNow;
+                // Czekamy a¿ WSZYSTKIE urz¹dzenia zostan¹ przeskanowane
+                var scanResults = await Task.WhenAll(scanTasks);
 
-                        if (scan.Success)
+                // 3. SEKWENCYJNA AKTUALIZACJA BAZY DANYCH (Bezpieczne dla Entity Framework)
+                foreach (var result in scanResults)
+                {
+                    var device = result.Device;
+                    var pingTime = result.PingTime;
+                    var snmpScan = result.SnmpScan;
+
+                    device.LastScanned = DateTime.UtcNow;
+
+                    device.PingResponseTimeMs = pingTime;
+
+                    // Logika Statusu
+                    if (pingTime.HasValue || snmpScan.Success)
+                    {
+                        device.Status = "Online";
+
+                        if (snmpScan.Success)
                         {
-                            device.Status = "Online";
-                            device.SysName = scan.Name;
-                            device.SysDescr = scan.Description;
-                            device.SysLocation = scan.Location;
-                            device.SysContact = scan.Contact;
-                            device.SysUpTime = scan.UpTime;
-                            device.SysInterfacesCount = scan.InterfacesCount;
+                            // SNMP odpowiedzia³o - aktualizujemy dane
+                            device.SysName = snmpScan.Name;
+                            device.SysDescr = snmpScan.Description;
+                            device.SysLocation = snmpScan.Location;
+                            device.SysContact = snmpScan.Contact;
+                            device.SysUpTime = snmpScan.UpTime;
+                            device.SysInterfacesCount = snmpScan.InterfacesCount;
                         }
                         else
                         {
-                            
-                            device.Status = scan.PingResponseTimeMs.HasValue ? "Limited" : "Offline";
-
-                            // Exception for the testing environment where ping response time is always 1ms, but device is actually offline
-                            if (scan.PingResponseTimeMs.HasValue && scan.PingResponseTimeMs.Value == 1)
-                            {
-                                device.Status = "Offline";
-                                device.PingResponseTimeMs = null;
-                            }
-
+                            // NAPRAWA B£ÊDU: Ping dzia³a, ale SNMP pad³o. 
+                            // Czyœcimy stare dane SNMP, ¿eby odznaka w UI zmieni³a siê na czerwon¹.
                             device.SysUpTime = null;
-
-                            if (!scan.PingResponseTimeMs.HasValue)
-                            {
-                                device.PingResponseTimeMs = null;
-                            }
+                            device.SysInterfacesCount = null;
+                            device.SysName = null;
+                            device.SysDescr = null;
+                            device.SysLocation = null;
+                            device.SysContact = null;
                         }
                     }
-
-                    await db.SaveChangesAsync(stoppingToken);
-                    await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", stoppingToken);
+                    else
+                    {
+                        // Absolutna cisza - sprzêt ca³kowicie martwy
+                        device.Status = "Offline";
+                        device.PingResponseTimeMs = null;
+                        device.SysUpTime = null;
+                        device.SysInterfacesCount = null;
+                        device.SysName = null;
+                        device.SysDescr = null;
+                        device.SysLocation = null;
+                        device.SysContact = null;
+                    }
                 }
+
+                // 4. Zapisujemy zaktualizowane dane i wysy³amy powiadomienie
+                await db.SaveChangesAsync(stoppingToken);
+                await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"ERROR: {ex.Message}");
+                _logger.LogError(ex, "An error occurred during device monitoring.");
             }
 
+            // Odpoczynek przed kolejnym skanem
             await Task.Delay(_checkInterval, stoppingToken);
         }
     }

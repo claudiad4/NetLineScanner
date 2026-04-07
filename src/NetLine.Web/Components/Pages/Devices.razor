@@ -104,11 +104,25 @@ else
                         </td>
                         <td>
                             @{
-                                var statusClass = device.Status == "Offline" ? "bg-danger" : "bg-success";
-                                var iconClass = device.Status == "Offline" ? "bi-x-circle" : "bi-check-circle";
+                                // Tutaj definiujemy kolory dla każdego stanu
+                                var statusClass = device.Status switch
+                                {
+                                    "Online" => "bg-success",
+                                    "Limited" => "bg-warning text-dark", // Żółty dla przypadków "pół-działa"
+                                    "Offline" => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+
+                                var iconClass = device.Status switch
+                                {
+                                    "Online" => "bi-check-circle",
+                                    "Limited" => "bi-exclamation-circle",
+                                    "Offline" => "bi-x-circle",
+                                    _ => "bi-question-circle"
+                                };
                             }
                             <span class="badge rounded-pill @statusClass w-100 shadow-sm">
-                                <i class="bi @iconClass"></i> @(device.Status == "Offline" ? "Offline" : "Online")
+                                <i class="bi @iconClass"></i> @device.Status
                             </span>
                         </td>
                         <td>
@@ -193,7 +207,7 @@ else
         {
             "Computer" => "bi-pc-display",
             "Laptop" => "bi-laptop",
-            "Serwer" => "bi-hdd-network",
+            "Server" => "bi-hdd-network",
             "Switch" => "bi-router",
             "Print" => "bi-printer",
             "Smartphone" => "bi-phone",

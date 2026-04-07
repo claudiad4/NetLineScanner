@@ -5632,7 +5632,8 @@
       this._observableSections = new Map();
       this._rootElement = getComputedStyle(this._element).overflowY === 'visible' ? null : this._element;
       this._activeTarget = null;
-      this._observer = null;
+      this._ob
+      = null;
       this._previousScrollData = {
         visibleEntryTop: 0,
         parentScrollTop: 0

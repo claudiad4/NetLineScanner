@@ -13,9 +13,8 @@ namespace NetLine.Domain.Models
         public string? Description { get; set; }
         public string? Location { get; set; }
         public string? Contact { get; set; }
-        public string? ErrorMessage { get; set; }
-        public long? PingResponseTimeMs { get; set; }
         public string? UpTime { get; set; }
         public int? InterfacesCount { get; set; }
+        public string? ErrorMessage { get; set; }
     }
 }
