@@ -14,6 +14,11 @@ builder.Services.AddHttpClient<DeviceApiClient>(client =>
     client.BaseAddress = new("https+http://apiservice");
 });
 
+builder.Services.AddHttpClient<AlertApiClient>(client =>
+{
+    client.BaseAddress = new("https+http://apiservice");
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

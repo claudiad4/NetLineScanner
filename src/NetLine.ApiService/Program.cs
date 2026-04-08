@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NetLine.Infrastructure.Data;      
 using NetLine.Infrastructure.Services;   
 using NetLine.Application.Interfaces;   
@@ -27,7 +27,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await context.Database.EnsureCreatedAsync();
+    await context.Database.MigrateAsync();  // ✅ Apply pending migrations
 }
 
 

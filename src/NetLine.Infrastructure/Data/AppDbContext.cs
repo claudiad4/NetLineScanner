@@ -9,6 +9,8 @@ public class AppDbContext : DbContext
 
     public DbSet<DeviceInfo> DevicesInfo => Set<DeviceInfo>();
 
+    public DbSet<DeviceAlert> DeviceAlerts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DeviceInfo>()

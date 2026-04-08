@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NetLine.ApiService.Hubs;
 using NetLine.Application.Interfaces;
+using NetLine.Domain.Entities;
 using NetLine.Infrastructure.Data;
 using NetLine.Infrastructure.Services;
 
@@ -71,11 +72,34 @@ public class DeviceMonitorService : BackgroundService
 
                     device.PingResponseTimeMs = pingTime;
 
-                    // Logika Statusu
-                    if (pingTime.HasValue || snmpScan.Success)
-                    {
-                        device.Status = "Online";
+                    // 1. ZAPAMIÊTUJEMY STARY STATUS
+                    string oldStatus = device.Status;
 
+                    // 2. USTALAMY NOWY STATUS
+                    string newStatus = (pingTime.HasValue || snmpScan.Success) ? "Online" : "Offline";
+
+                    // 3. WYKRYWANIE ZMIANY (Edge Detection)
+                    if (oldStatus != newStatus)
+                    {
+                        var alert = new DeviceAlert
+                        {
+                            DeviceInfoId = device.Id,
+                            Timestamp = DateTime.UtcNow,
+                            Type = newStatus == "Offline" ? AlertType.WentOffline : AlertType.CameOnline,
+                            Message = newStatus == "Offline"
+                                ? $"Urz¹dzenie {device.UserDefinedName} przesta³o odpowiadaæ."
+                                : $"Urz¹dzenie {device.UserDefinedName} wróci³o do sieci."
+                        };
+                        db.DeviceAlerts.Add(alert);
+                        _logger.LogInformation("ALERT: {Msg}", alert.Message);
+                    }
+
+                    // 4. AKTUALIZUJEMY STATUS URZ¥DZENIA
+                    device.Status = newStatus;
+
+                    // Logika dla Statusu Online
+                    if (newStatus == "Online")
+                    {
                         if (snmpScan.Success)
                         {
                             // SNMP odpowiedzia³o - aktualizujemy dane
@@ -101,7 +125,6 @@ public class DeviceMonitorService : BackgroundService
                     else
                     {
                         // Absolutna cisza - sprzêt ca³kowicie martwy
-                        device.Status = "Offline";
                         device.PingResponseTimeMs = null;
                         device.SysUpTime = null;
                         device.SysInterfacesCount = null;
