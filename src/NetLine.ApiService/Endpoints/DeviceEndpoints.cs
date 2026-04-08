@@ -1,21 +1,45 @@
-﻿namespace NetLine.ApiService.Endpoints;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using NetLine.Application.Interfaces;
 using NetLine.Domain.Entities;
 using NetLine.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
 
-    public static class DeviceEndpoints
-    {
+namespace NetLine.ApiService.Endpoints;
 
+public static class DeviceEndpoints
+{
     public static void MapDeviceEndpoints(this WebApplication app)
     {
-        // IP scanning - teraz zwraca i Ping i SNMP
-        app.MapGet("/api/scan/{ip}", async (string ip, ISNMPService snmp, IICMPService ping) =>
+        // IP scanning endpoint - public
+        app.MapGet("/api/scan/{ip}", ScanDevice)
+            .WithName("ScanDevice")
+            .WithOpenApi();
+
+        // Usuwamy .WithName("Devices") z grupy, zostawiamy tylko trasę
+        var group = app.MapGroup("/api/devices")
+            .WithOpenApi()
+            .RequireAuthorization();
+
+        // Nadajemy unikalne nazwy konkretnym metodom
+        group.MapGet("/", GetDevices)
+            .WithName("GetDevicesList"); // Unikalna nazwa dla GET
+
+        group.MapPost("/", AddDevice)
+            .WithName("CreateNewDevice"); // Unikalna nazwa dla POST
+    }
+
+    private static async Task<IResult> ScanDevice(
+        string ip,
+        ISNMPService snmp,
+        IICMPService ping)
+    {
+        try
         {
             var pingMs = await ping.GetPingResponseTimeAsync(ip);
             var snmpResult = await snmp.GetDeviceInfoAsync(ip);
 
-            // Zwracamy obiekt łączony, żeby frontend dostał komplet informacji
             return Results.Ok(new
             {
                 Ip = ip,
@@ -23,43 +47,67 @@ using NetLine.Infrastructure.Data;
                 Snmp = snmpResult,
                 IsOnline = pingMs.HasValue
             });
-        })
-        .WithName("ScanDevice");
-
-        // List of devices
-        app.MapGet("/api/devices", async (AppDbContext db) =>
+        }
+        catch (Exception ex)
         {
-            return await db.DevicesInfo.ToListAsync();
-        })
-        .WithName("GetDevices");
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
 
-        // Add device - tutaj łączymy wyniki obu usług
-        app.MapPost("/api/devices", async (string ip, string userLabel, string type, AppDbContext db, ISNMPService snmp, IICMPService ping) =>
+    private static async Task<IResult> GetDevices(AppDbContext db)
+    {
+        try
         {
+            var devices = await db.DevicesInfo.ToListAsync();
+            return Results.Ok(devices);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem($"Error retrieving devices: {ex.Message}");
+        }
+    }
+
+    private static async Task<IResult> AddDevice(
+        [FromQuery] string ip,
+        [FromQuery] string userLabel,
+        [FromQuery] string type,
+        AppDbContext db,
+        ISNMPService snmp,
+        IICMPService ping)
+    {
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(ip) || string.IsNullOrWhiteSpace(userLabel))
+                return Results.BadRequest("IP and device label are required.");
+
+            // Check if IP already exists
             var existing = await db.DevicesInfo.AnyAsync(d => d.IpAddress == ip);
-            if (existing) return Results.BadRequest("This IP is already in the database.");
+            if (existing)
+                return Results.BadRequest("This IP is already in the database.");
 
-            // 1. Sprawdzamy Ping
+            // Scan the device
             var pingMs = await ping.GetPingResponseTimeAsync(ip);
+            var snmpScan = await snmp.GetDeviceInfoAsync(ip);
 
-            // 2. Sprawdzamy SNMP
-            var scan = await snmp.GetDeviceInfoAsync(ip);
+            // Determine status
+            string status = pingMs.HasValue 
+                ? (snmpScan.Success ? "Online" : "Limited") 
+                : "Offline";
 
             var newDevice = new DeviceInfo
             {
                 IpAddress = ip,
                 UserDefinedName = userLabel,
-                DeviceType = type,
-                // Logika statusu
-                Status = pingMs.HasValue ? (scan.Success ? "Online" : "Limited") : "Offline",
+                DeviceType = type ?? "Other",
+                Status = status,
                 PingResponseTimeMs = pingMs,
-                // Mapowanie danych SNMP
-                SysName = scan.Name ?? "Unknown",
-                SysDescr = scan.Description ?? "Unknown",
-                SysLocation = scan.Location ?? "Unknown",
-                SysContact = scan.Contact ?? "Unknown",
-                SysUpTime = scan.UpTime,
-                SysInterfacesCount = scan.InterfacesCount,
+                SysName = snmpScan.Name,
+                SysDescr = snmpScan.Description,
+                SysLocation = snmpScan.Location,
+                SysContact = snmpScan.Contact,
+                SysUpTime = snmpScan.UpTime,
+                SysInterfacesCount = snmpScan.InterfacesCount,
                 LastScanned = DateTime.UtcNow
             };
 
@@ -67,51 +115,10 @@ using NetLine.Infrastructure.Data;
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/devices/{newDevice.Id}", newDevice);
-        })
-        .WithName("AddDevice");
-
-        // Get all alerts
-        app.MapGet("/api/alerts", async (AppDbContext db) =>
+        }
+        catch (Exception ex)
         {
-            return await db.DeviceAlerts
-                .Include(a => a.Device)
-                .OrderByDescending(a => a.Timestamp)
-                .ToListAsync();
-        })
-        .WithName("GetAlerts");
-
-        // Mark alert as read
-        app.MapPut("/api/alerts/{id}/read", async (int id, AppDbContext db) =>
-        {
-            var alert = await db.DeviceAlerts.FindAsync(id);
-            if (alert == null) return Results.NotFound();
-
-            alert.IsRead = true;
-            await db.SaveChangesAsync();
-            return Results.Ok();
-        })
-        .WithName("MarkAlertAsRead");
-
-        // Mark all alerts as read
-        app.MapPut("/api/alerts/mark-all-as-read", async (AppDbContext db) =>
-        {
-            var alerts = await db.DeviceAlerts.Where(a => !a.IsRead).ToListAsync();
-            foreach (var alert in alerts)
-            {
-                alert.IsRead = true;
-            }
-            await db.SaveChangesAsync();
-            return Results.Ok();
-        })
-        .WithName("MarkAllAlertsAsRead");
-
-        // Clear all alerts
-        app.MapDelete("/api/alerts", async (AppDbContext db) =>
-        {
-            db.DeviceAlerts.RemoveRange(await db.DeviceAlerts.ToListAsync());
-            await db.SaveChangesAsync();
-            return Results.Ok();
-        })
-        .WithName("ClearAllAlerts");
+            return Results.Problem($"Error adding device: {ex.Message}");
+        }
     }
 }
