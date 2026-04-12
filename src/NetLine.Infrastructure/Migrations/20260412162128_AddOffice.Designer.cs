@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetLine.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260412160811_AddOffice")]
+    [Migration("20260412162128_AddOffice")]
     partial class AddOffice
     {
         /// <inheritdoc />
