@@ -1,0 +1,169 @@
+﻿@page "/offices"
+@using NetLine.Web.Services
+@using NetLine.Domain.Entities
+@rendermode InteractiveServer
+@inject OfficeApiClient ApiClient
+@inject NavigationManager Nav
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<PageTitle>Biura</PageTitle>
+
+<style>
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+
+    .office-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+
+    .office-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(111, 66, 193, 0.15) !important;
+    }
+
+    .office-icon {
+        width: 50px;
+        height: 50px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-building text-purple"></i> Biura</h1>
+    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="() => showForm = !showForm">
+        <i class="bi bi-plus-lg"></i> Dodaj biuro
+    </button>
+</div>
+
+@if (showForm)
+{
+    <div class="card p-4 mb-4 shadow-sm" style="max-width: 500px;">
+        <h5 class="mb-3">Nowe biuro</h5>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nazwa biura</label>
+            <input @bind="newName" class="form-control" placeholder="np. Biuro Warszawa" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Lokalizacja (opcjonalnie)</label>
+            <input @bind="newLocation" class="form-control" placeholder="np. ul. Marszałkowska 1" />
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="AddOffice" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                    <span> Dodawanie...</span>
+                }
+                else
+                {
+                    <span>Dodaj</span>
+                }
+            </button>
+            <button class="btn btn-outline-secondary w-100" @onclick="() => showForm = false">Anuluj</button>
+        </div>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+    </div>
+}
+
+@if (offices == null)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-purple" role="status"></div>
+        <p class="mt-2 text-muted">Ładowanie biur...</p>
+    </div>
+}
+else if (offices.Count == 0)
+{
+    <div class="text-center mt-5 text-muted">
+        <i class="bi bi-building" style="font-size: 3rem;"></i>
+        <p class="mt-2">Brak biur. Dodaj pierwsze biuro.</p>
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (var office in offices)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100 office-card" @onclick="() => Nav.NavigateTo($"/offices/{office.Id}")">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="office-icon me-3">
+                                <i class="bi bi-building text-purple"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">@office.Name</h5>
+                                <small class="text-muted">@(office.Location ?? "Brak lokalizacji")</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Dodano: @office.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</small>
+                        <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" @onclick="() => DeleteOffice(office.Id)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Office>? offices;
+    private string newName = "";
+    private string? newLocation;
+    private bool isLoading = false;
+    private bool showForm = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        offices = await ApiClient.GetOfficesAsync();
+    }
+
+    private async Task AddOffice()
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            errorMessage = "Nazwa biura jest wymagana.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+
+        var (success, error) = await ApiClient.AddOfficeAsync(newName, newLocation);
+
+        if (success)
+        {
+            newName = "";
+            newLocation = null;
+            showForm = false;
+            offices = await ApiClient.GetOfficesAsync();
+        }
+        else
+        {
+            errorMessage = error ?? "Nie udało się dodać biura.";
+        }
+
+        isLoading = false;
+    }
+
+    private async Task DeleteOffice(int id)
+    {
+        await ApiClient.DeleteOfficeAsync(id);
+        offices = await ApiClient.GetOfficesAsync();
+    }
+}
