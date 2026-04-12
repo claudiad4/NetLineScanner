@@ -16,18 +16,6 @@ public static class DeviceEndpoints
 
         var group = app.MapGroup("/api/devices")
             .WithOpenApi();
-            //.RequireAuthorization();
-
-        group.MapGet("/", async (IDeviceManager svc) =>
-            Results.Ok(await svc.GetAllAsync()))
-            .WithName("GetDevicesList");
-
-        group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
-        {
-            var device = await svc.AddAsync(request);
-            return Results.Created($"/api/devices/{device.Id}", device);
-        })
-        .WithName("CreateNewDevice");
 
         group.MapGet("/", async (AppDbContext db, int? officeId) =>
         {
@@ -44,5 +32,12 @@ public static class DeviceEndpoints
             return device is null ? Results.NotFound() : Results.Ok(device);
         })
         .WithName("GetDevice");
+
+        group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
+        {
+            var device = await svc.AddAsync(request);
+            return Results.Created($"/api/devices/{device.Id}", device);
+        })
+        .WithName("CreateNewDevice");
     }
 }

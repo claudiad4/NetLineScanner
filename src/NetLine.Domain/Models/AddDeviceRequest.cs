@@ -9,5 +9,6 @@ namespace NetLine.Domain.Models;
 public record AddDeviceRequest(
     string Ip,
     string UserLabel,
+    int OfficeId,
     string Type = "Other"
 );

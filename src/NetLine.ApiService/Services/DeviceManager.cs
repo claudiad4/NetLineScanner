@@ -51,6 +51,7 @@ public class DeviceManager : IDeviceManager
                 IpAddress = request.Ip,
                 UserDefinedName = request.UserLabel,
                 DeviceType = request.Type,
+                OfficeId = request.OfficeId,
                 Status = status,
                 PingResponseTimeMs = pingMs,
                 SysName = snmpScan.Name,

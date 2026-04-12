@@ -14,27 +14,140 @@
 <PageTitle>@(office?.Name ?? "Biuro")</PageTitle>
 
 <style>
-    .text-purple { color: #6f42c1 !important; }
-    .bg-soft-success { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #badbcc !important; }
-    .bg-soft-danger { background-color: #f8d7da !important; color: #842029 !important; border: 1px solid #f5c2c7 !important; }
-    .detail-row { background-color: #f8faff; animation: fadeIn 0.3s ease-out; }
-    .details-container { padding: 20px; border-left: 5px solid #6f42c1; margin: 10px 0 10px 40px; background: white; border-radius: 0 8px 8px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .table-hover tbody tr:not(.detail-row):hover { background-color: rgba(111, 66, 193, 0.05); cursor: pointer; }
-    .badge-tech { font-size: 0.7rem; padding: 4px 8px; font-weight: bold; min-width: 55px; text-align: center; border-radius: 4px; }
-    @@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+
+    .bg-soft-success {
+        background-color: #d1e7dd !important;
+        color: #0f5132 !important;
+        border: 1px solid #badbcc !important;
+    }
+
+    .bg-soft-danger {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+        border: 1px solid #f5c2c7 !important;
+    }
+
+    .detail-row {
+        background-color: #f8faff;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .details-container {
+        padding: 20px;
+        border-left: 5px solid #6f42c1;
+        margin: 10px 0 10px 40px;
+        background: white;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .table-hover tbody tr:not(.detail-row):hover {
+        background-color: rgba(111, 66, 193, 0.05);
+        cursor: pointer;
+    }
+
+    .badge-tech {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        font-weight: bold;
+        min-width: 55px;
+        text-align: center;
+        border-radius: 4px;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
-<div class="d-flex align-items-center mb-4 gap-3">
-    <button class="btn btn-outline-secondary btn-sm" @onclick='() => Nav.NavigateTo("/offices")'>
-        <i class="bi bi-arrow-left"></i> Powrót
+@* Nagłówek *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-outline-secondary btn-sm" @onclick='() => Nav.NavigateTo("/offices")'>
+            <i class="bi bi-arrow-left"></i> Powrót
+        </button>
+        <h1 class="mb-0"><i class="bi bi-building text-purple"></i> @(office?.Name ?? "Ładowanie...")</h1>
+        @if (office?.Location != null)
+        {
+            <small class="text-muted"><i class="bi bi-geo-alt"></i> @office.Location</small>
+        }
+    </div>
+    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="() => showForm = !showForm">
+        <i class="bi bi-plus-lg"></i> Dodaj urządzenie
     </button>
-    <h1 class="mb-0"><i class="bi bi-building text-purple"></i> @(office?.Name ?? "Ładowanie...")</h1>
-    @if (office?.Location != null)
-    {
-        <small class="text-muted"><i class="bi bi-geo-alt"></i> @office.Location</small>
-    }
 </div>
 
+@* Formularz dodawania urządzenia *@
+@if (showForm)
+{
+    <div class="card p-4 mb-4 shadow-sm" style="max-width: 600px;">
+        <h5 class="mb-3">Nowe urządzenie</h5>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Adres IP</label>
+            <div class="d-flex align-items-center justify-content-between">
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" placeholder="192" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" placeholder="168" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip3" placeholder="0" style="width: 70px;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip4" placeholder="1" style="width: 70px;" />
+            </div>
+            @if (isIpInvalid)
+            {
+                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle"></i> Podaj poprawne liczby (0-255).</div>
+            }
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nazwa urządzenia</label>
+            <input @bind="deviceLabel" class="form-control" placeholder="np. Drukarka w pokoju 112" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Typ urządzenia</label>
+            <select class="form-select" @bind="deviceType">
+                <option value="Computer">Computer</option>
+                <option value="Server">Server</option>
+                <option value="Switch">Switch</option>
+                <option value="Printer">Printer</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Smartphone">Smartphone</option>
+                <option value="Tablet">Tablet</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="AddDevice" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                    <span> Dodawanie...</span>
+                }
+                else
+                {
+                    <span>Dodaj</span>
+                }
+            </button>
+            <button class="btn btn-outline-secondary w-100" @onclick="() => showForm = false">Anuluj</button>
+        </div>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+    </div>
+}
+
+@* Lista urządzeń *@
 @if (devices == null)
 {
     <div class="text-center mt-5">
@@ -47,9 +160,6 @@ else if (devices.Count == 0)
     <div class="text-center mt-5 text-muted">
         <i class="bi bi-hdd-network" style="font-size: 3rem;"></i>
         <p class="mt-2">Brak urządzeń w tym biurze.</p>
-        <a href="/add-device" class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;">
-            <i class="bi bi-plus-lg"></i> Dodaj urządzenie
-        </a>
     </div>
 }
 else
@@ -164,6 +274,15 @@ else
     private int? expandedDeviceId;
     private HubConnection? hubConnection;
 
+    // Formularz
+    private bool showForm = false;
+    private bool isLoading = false;
+    private bool isIpInvalid = false;
+    private string? errorMessage;
+    private string ip1 = "", ip2 = "", ip3 = "", ip4 = "";
+    private string deviceLabel = "";
+    private string deviceType = "Computer";
+
     private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
 
     private string GetIconForType(string? type) => type switch
@@ -177,6 +296,47 @@ else
         "Tablet" => "bi-tablet",
         _ => "bi-three-dots"
     };
+
+    private async Task AddDevice()
+    {
+        isIpInvalid = false;
+        errorMessage = null;
+
+        if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
+        {
+            isIpInvalid = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deviceLabel))
+        {
+            errorMessage = "Nazwa urządzenia jest wymagana.";
+            return;
+        }
+
+        isLoading = true;
+        string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
+
+        var (success, error) = await DeviceClient.AddDeviceAsync(fullIp, deviceLabel, deviceType, Id);
+
+        if (success)
+        {
+            ip1 = ip2 = ip3 = ip4 = "";
+            deviceLabel = "";
+            deviceType = "Computer";
+            showForm = false;
+            devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+        }
+        else
+        {
+            errorMessage = error ?? "Nie udało się dodać urządzenia.";
+        }
+
+        isLoading = false;
+    }
+
+    private bool IsValidByte(string input) =>
+        int.TryParse(input, out int result) && result >= 0 && result <= 255;
 
     protected override async Task OnInitializedAsync()
     {
