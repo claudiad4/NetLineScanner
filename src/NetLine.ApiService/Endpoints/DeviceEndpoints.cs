@@ -13,8 +13,8 @@ public static class DeviceEndpoints
             .WithOpenApi();
 
         var group = app.MapGroup("/api/devices")
-            .WithOpenApi()
-            .RequireAuthorization();
+            .WithOpenApi();
+            //.RequireAuthorization();
 
         group.MapGet("/", async (IDeviceManager svc) =>
             Results.Ok(await svc.GetAllAsync()))
