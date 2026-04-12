@@ -44,4 +44,7 @@ public class DeviceApiClient(HttpClient httpClient)
     public async Task<bool> MarkAlertAsReadAsync(int alertId)
         => (await httpClient.PutAsync($"api/alerts/{alertId}/read", null))
            .IsSuccessStatusCode;
+
+    public async Task<List<DeviceInfo>> GetDevicesByOfficeAsync(int officeId)
+    => await httpClient.GetFromJsonAsync<List<DeviceInfo>>($"api/devices?officeId={officeId}") ?? [];
 }

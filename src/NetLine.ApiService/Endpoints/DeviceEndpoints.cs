@@ -1,5 +1,7 @@
-﻿using NetLine.Application.Interfaces.Devices;
+﻿using Microsoft.EntityFrameworkCore;
+using NetLine.Application.Interfaces.Devices;
 using NetLine.Domain.Models;
+using NetLine.Infrastructure.Data;
 
 namespace NetLine.ApiService.Endpoints;
 
@@ -26,5 +28,14 @@ public static class DeviceEndpoints
             return Results.Created($"/api/devices/{device.Id}", device);
         })
         .WithName("CreateNewDevice");
+
+        group.MapGet("/", async (AppDbContext db, int? officeId) =>
+        {
+            var query = db.DevicesInfo.AsQueryable();
+            if (officeId.HasValue)
+                query = query.Where(d => d.OfficeId == officeId);
+            return Results.Ok(await query.ToListAsync());
+        })
+        .WithName("GetDevicesList");
     }
 }

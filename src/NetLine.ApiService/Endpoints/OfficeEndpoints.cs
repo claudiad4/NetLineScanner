@@ -18,6 +18,13 @@ public static class OfficeEndpoints
         })
         .WithName("GetOffices");
 
+        group.MapGet("/{id}", async (int id, AppDbContext db) =>
+        {
+            var office = await db.Offices.FindAsync(id);
+            return office is null ? Results.NotFound() : Results.Ok(office);
+        })
+        .WithName("GetOffice");
+
         group.MapPost("/", async (Office office, AppDbContext db) =>
         {
             db.Offices.Add(office);

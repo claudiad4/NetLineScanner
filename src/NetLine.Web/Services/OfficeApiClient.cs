@@ -21,4 +21,7 @@ public class OfficeApiClient(HttpClient httpClient)
 
     public async Task<bool> DeleteOfficeAsync(int id)
         => (await httpClient.DeleteAsync($"api/offices/{id}")).IsSuccessStatusCode;
+
+    public async Task<Office?> GetOfficeAsync(int id)
+    => await httpClient.GetFromJsonAsync<Office>($"api/offices/{id}");
 }
