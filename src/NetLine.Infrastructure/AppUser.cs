@@ -10,4 +10,6 @@ namespace NetLine.Infrastructure;
 public class AppUser : IdentityUser
 {
     public int? OfficeId { get; set; }
+    public string FirstName { get; set; } = default!;
+    public string LastName { get; set; } = default!;
 }
