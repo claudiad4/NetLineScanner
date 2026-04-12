@@ -268,7 +268,7 @@ namespace NetLine.Infrastructure.Migrations
                     b.Property<DateTime>("LastScanned")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("OfficeId")
+                    b.Property<int?>("OfficeId")
                         .HasColumnType("integer");
 
                     b.Property<long?>("PingResponseTimeMs")
@@ -400,8 +400,7 @@ namespace NetLine.Infrastructure.Migrations
                     b.HasOne("NetLine.Domain.Entities.Office", "Office")
                         .WithMany("Devices")
                         .HasForeignKey("OfficeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Office");
                 });

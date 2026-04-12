@@ -30,6 +30,6 @@ public class DeviceInfo
 
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
 
-    public int OfficeId { get; set; }
+    public int? OfficeId { get; set; }
     public Office Office { get; set; } = default!;
 }

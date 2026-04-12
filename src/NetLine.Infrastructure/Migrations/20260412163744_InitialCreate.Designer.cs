@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetLine.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260408193809_AddIdentityTables")]
-    partial class AddIdentityTables
+    [Migration("20260412163744_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -271,6 +271,9 @@ namespace NetLine.Infrastructure.Migrations
                     b.Property<DateTime>("LastScanned")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("OfficeId")
+                        .HasColumnType("integer");
+
                     b.Property<long?>("PingResponseTimeMs")
                         .HasColumnType("bigint");
 
@@ -305,7 +308,32 @@ namespace NetLine.Infrastructure.Migrations
                     b.HasIndex("IpAddress")
                         .IsUnique();
 
+                    b.HasIndex("OfficeId");
+
                     b.ToTable("deviceinfo");
+                });
+
+            modelBuilder.Entity("NetLine.Domain.Entities.Office", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Offices");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -368,6 +396,21 @@ namespace NetLine.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Device");
+                });
+
+            modelBuilder.Entity("NetLine.Domain.Entities.DeviceInfo", b =>
+                {
+                    b.HasOne("NetLine.Domain.Entities.Office", "Office")
+                        .WithMany("Devices")
+                        .HasForeignKey("OfficeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Office");
+                });
+
+            modelBuilder.Entity("NetLine.Domain.Entities.Office", b =>
+                {
+                    b.Navigation("Devices");
                 });
 #pragma warning restore 612, 618
         }

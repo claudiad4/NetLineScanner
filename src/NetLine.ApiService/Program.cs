@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add DbContext with PostgreSQL
-builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
+builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
 // Add Identity services
 builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
