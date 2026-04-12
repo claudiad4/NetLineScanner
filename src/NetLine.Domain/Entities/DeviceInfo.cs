@@ -29,4 +29,7 @@ public class DeviceInfo
     public int? SysInterfacesCount { get; set; }   
 
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
+
+    public int? OfficeId { get; set; }
+    public Office Office { get; set; } = default!;
 }

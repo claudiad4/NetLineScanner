@@ -1,0 +1,283 @@
+﻿@page "/offices/{Id:int}"
+@using NetLine.Web.Services
+@using NetLine.Domain.Entities
+@using Microsoft.AspNetCore.SignalR.Client
+@rendermode InteractiveServer
+@inject OfficeApiClient OfficeClient
+@inject DeviceApiClient DeviceClient
+@inject NavigationManager Nav
+@inject IConfiguration Config
+@implements IAsyncDisposable
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<PageTitle>@(office?.Name ?? "Biuro")</PageTitle>
+
+<style>
+    .text-purple { color: #6f42c1 !important; }
+    .bg-soft-success { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #badbcc !important; }
+    .bg-soft-danger { background-color: #f8d7da !important; color: #842029 !important; border: 1px solid #f5c2c7 !important; }
+    .detail-row { background-color: #f8faff; animation: fadeIn 0.3s ease-out; }
+    .details-container { padding: 20px; border-left: 5px solid #6f42c1; margin: 10px 0 10px 40px; background: white; border-radius: 0 8px 8px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .table-hover tbody tr:not(.detail-row):hover { background-color: rgba(111, 66, 193, 0.05); cursor: pointer; }
+    .badge-tech { font-size: 0.7rem; padding: 4px 8px; font-weight: bold; min-width: 55px; text-align: center; border-radius: 4px; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+@* Nagłówek *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-outline-secondary btn-sm" @onclick='() => Nav.NavigateTo("/offices")'>
+            <i class="bi bi-arrow-left"></i> Powrót
+        </button>
+        <h1 class="mb-0"><i class="bi bi-building text-purple"></i> @(office?.Name ?? "Ładowanie...")</h1>
+        @if (office?.Location != null)
+        {
+            <small class="text-muted"><i class="bi bi-geo-alt"></i> @office.Location</small>
+        }
+    </div>
+    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="ToggleAddForm">
+        <i class="bi bi-plus-lg"></i> Add device
+    </button>
+</div>
+
+@* Formularz *@
+<DeviceForm
+    IsVisible="showForm"
+    Device="editingDevice"
+    OfficeId="Id"
+    OnSuccess="OnDeviceFormSuccess"
+    OnCancel="OnDeviceFormCancel" />
+
+@* Lista urządzeń *@
+@if (devices == null)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-purple" role="status"></div>
+        <p class="mt-2 text-muted">Ładowanie urządzeń...</p>
+    </div>
+}
+else if (devices.Count == 0)
+{
+    <div class="text-center mt-5 text-muted">
+        <i class="bi bi-hdd-network" style="font-size: 3rem;"></i>
+        <p class="mt-2">Brak urządzeń w tym biurze.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table align-middle bg-white table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th style="width: 130px;">Status</th>
+                    <th style="width: 140px;">Protokół</th>
+                    <th>Urządzenie</th>
+                    <th>Adres IP</th>
+                    <th>Ostatni skan</th>
+                    <th style="width: 100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var device in devices)
+                {
+                    <tr @onclick="() => ToggleDetails(device.Id)">
+                        <td class="text-center">
+                            <i class="bi @(expandedDeviceId == device.Id ? "bi-chevron-down text-purple" : "bi-chevron-right text-muted")"></i>
+                        </td>
+                        <td>
+                            @{
+                                var statusClass = device.Status switch
+                                {
+                                    "Online" => "bg-success",
+                                    "Limited" => "bg-warning text-dark",
+                                    "Offline" => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+                                var iconClass = device.Status switch
+                                {
+                                    "Online" => "bi-check-circle",
+                                    "Limited" => "bi-exclamation-circle",
+                                    "Offline" => "bi-x-circle",
+                                    _ => "bi-question-circle"
+                                };
+                            }
+                            <span class="badge rounded-pill @statusClass w-100 shadow-sm">
+                                <i class="bi @iconClass"></i> @device.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
+                                <span class="badge @(!string.IsNullOrEmpty(device.SysUpTime) ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                     style="width: 40px; height: 40px; background-color: #e9ecef;">
+                                    <i class="bi @GetIconForType(device.DeviceType)" style="font-size: 1.2rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">@device.UserDefinedName</div>
+                                    <small class="text-muted"><i class="bi bi-tag"></i> @device.DeviceType</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center">
+                                <small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1" @onclick:stopPropagation="true">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditDevice(device)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteDevice(device.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    @if (expandedDeviceId == device.Id)
+                    {
+                        <tr class="detail-row">
+                            <td colspan="7">
+                                <div class="details-container">
+                                    <div class="row">
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> System</h6>
+                                            <p class="mb-1 small"><strong>Nazwa (SNMP):</strong> @(device.SysName ?? "Brak danych")</p>
+                                            <p class="mb-1 small"><strong>Lokalizacja:</strong> @(device.SysLocation ?? "Brak danych")</p>
+                                            <p class="mb-1 small"><strong>Kontakt:</strong> @(device.SysContact ?? "Brak danych")</p>
+                                        </div>
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status</h6>
+                                            <p class="mb-1 small"><strong>UpTime:</strong> @(device.SysUpTime ?? "Brak danych")</p>
+                                            <p class="mb-1 small"><strong>Interfejsy:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
+                                            <p class="mb-1 small"><strong>Ping:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Inne</h6>
+                                            <small class="text-muted" style="font-size: 0.75rem;">
+                                                @(device.SysDescr ?? "Brak opisu.")
+                                            </small>
+                                            <div class="mt-2">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick='() => Nav.NavigateTo($"/devices/{device.Id}")'>
+                                                    <i class="bi bi-bar-chart"></i> Szczegóły i wykresy
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Office? office;
+    private List<DeviceInfo>? devices;
+    private int? expandedDeviceId;
+    private HubConnection? hubConnection;
+    private bool showForm = false;
+    private DeviceInfo? editingDevice;
+
+    private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
+
+    private string GetIconForType(string? type) => type switch
+    {
+        "Computer" => "bi-pc-display",
+        "Laptop" => "bi-laptop",
+        "Server" => "bi-hdd-network",
+        "Switch" => "bi-router",
+        "Printer" => "bi-printer",
+        "Smartphone" => "bi-phone",
+        "Tablet" => "bi-tablet",
+        _ => "bi-three-dots"
+    };
+
+    private void EditDevice(DeviceInfo device)
+    {
+        editingDevice = device;
+        showForm = true;
+    }
+
+    private async Task DeleteDevice(int id)
+    {
+        await DeviceClient.DeleteDeviceAsync(id);
+        devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+    }
+
+    private async Task OnDeviceFormSuccess()
+    {
+        showForm = false;
+        editingDevice = null;
+        devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+        StateHasChanged();
+    }
+
+    private Task OnDeviceFormCancel()
+    {
+        showForm = false;
+        editingDevice = null;
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+
+        var apiBaseUrl = Config["services:apiservice:http:0"] ?? Config["services:apiservice:https:0"];
+        if (!string.IsNullOrEmpty(apiBaseUrl))
+        {
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{apiBaseUrl}/devicehub")
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On("DeviceStatusUpdated", async () =>
+            {
+                await LoadData();
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            office = await OfficeClient.GetOfficeAsync(Id);
+            devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
+    }
+
+    private void ToggleAddForm()
+    {
+        editingDevice = null;
+        showForm = !showForm;
+    }
+}

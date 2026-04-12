@@ -1,9 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume()
     .WithPgAdmin();
 
-var deviceDb = postgres.AddDatabase("deviceinfo");
+var deviceDb = postgres.AddDatabase("NetLineDB");
 
 var cache = builder.AddRedis("cache");
 

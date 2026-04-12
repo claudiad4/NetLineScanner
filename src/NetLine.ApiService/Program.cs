@@ -12,15 +12,16 @@ using NetLine.Application.Interfaces.Devices;
 using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
 using NetLine.Infrastructure.Services.Monitoring;
+using NetLine.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add DbContext with PostgreSQL
-builder.AddNpgsqlDbContext<AppDbContext>("deviceinfo");
+builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
 // Add Identity services
-builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
+builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 {
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = true;
@@ -89,10 +90,10 @@ app.MapDefaultEndpoints();
 app.MapHub<DeviceHub>("/devicehub");
 app.MapGet("/", () => "NetLine API - Monitoring system is ready.");
 app.MapDeviceEndpoints();
-app.MapAlertEndpoints();
-
+app.MapOfficeEndpoints();
+app.MapUserEndpoints();
 
 // Map Identity endpoints
-app.MapIdentityApi<IdentityUser>();
+app.MapIdentityApi<AppUser>();
 
 app.Run();

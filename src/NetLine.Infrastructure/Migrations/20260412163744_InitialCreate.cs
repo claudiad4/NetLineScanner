@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetLine.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIdentityTables : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -49,6 +49,21 @@ namespace NetLine.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Offices",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Location = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Offices", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -157,6 +172,60 @@ namespace NetLine.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "deviceinfo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserDefinedName = table.Column<string>(type: "text", nullable: false),
+                    DeviceType = table.Column<string>(type: "text", nullable: false),
+                    IpAddress = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    PingResponseTimeMs = table.Column<long>(type: "bigint", nullable: true),
+                    SysName = table.Column<string>(type: "text", nullable: true),
+                    SysDescr = table.Column<string>(type: "text", nullable: true),
+                    SysLocation = table.Column<string>(type: "text", nullable: true),
+                    SysContact = table.Column<string>(type: "text", nullable: true),
+                    SysUpTime = table.Column<string>(type: "text", nullable: true),
+                    SysInterfacesCount = table.Column<int>(type: "integer", nullable: true),
+                    LastScanned = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    OfficeId = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_deviceinfo", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_deviceinfo_Offices_OfficeId",
+                        column: x => x.OfficeId,
+                        principalTable: "Offices",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DeviceAlerts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DeviceInfoId = table.Column<int>(type: "integer", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Message = table.Column<string>(type: "text", nullable: false),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeviceAlerts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DeviceAlerts_deviceinfo_DeviceInfoId",
+                        column: x => x.DeviceInfoId,
+                        principalTable: "deviceinfo",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -193,6 +262,22 @@ namespace NetLine.Infrastructure.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeviceAlerts_DeviceInfoId",
+                table: "DeviceAlerts",
+                column: "DeviceInfoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_deviceinfo_IpAddress",
+                table: "deviceinfo",
+                column: "IpAddress",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_deviceinfo_OfficeId",
+                table: "deviceinfo",
+                column: "OfficeId");
         }
 
         /// <inheritdoc />
@@ -214,10 +299,19 @@ namespace NetLine.Infrastructure.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "DeviceAlerts");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "deviceinfo");
+
+            migrationBuilder.DropTable(
+                name: "Offices");
         }
     }
 }

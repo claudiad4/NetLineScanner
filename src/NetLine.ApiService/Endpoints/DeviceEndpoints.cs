@@ -1,5 +1,8 @@
-﻿using NetLine.Application.Interfaces.Devices;
+﻿using Microsoft.EntityFrameworkCore;
+using NetLine.Application.Interfaces.Devices;
+using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
+using NetLine.Infrastructure.Data;
 
 namespace NetLine.ApiService.Endpoints;
 
@@ -14,11 +17,22 @@ public static class DeviceEndpoints
 
         var group = app.MapGroup("/api/devices")
             .WithOpenApi();
-            //.RequireAuthorization();
 
-        group.MapGet("/", async (IDeviceManager svc) =>
-            Results.Ok(await svc.GetAllAsync()))
-            .WithName("GetDevicesList");
+        group.MapGet("/", async (AppDbContext db, int? officeId) =>
+        {
+            var query = db.DevicesInfo.AsQueryable();
+            if (officeId.HasValue)
+                query = query.Where(d => d.OfficeId == officeId);
+            return Results.Ok(await query.ToListAsync());
+        })
+        .WithName("GetDevicesList");
+
+        group.MapGet("/{id}", async (int id, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            return device is null ? Results.NotFound() : Results.Ok(device);
+        })
+        .WithName("GetDevice");
 
         group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
         {
@@ -26,5 +40,30 @@ public static class DeviceEndpoints
             return Results.Created($"/api/devices/{device.Id}", device);
         })
         .WithName("CreateNewDevice");
+
+        group.MapDelete("/{id}", async (int id, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            if (device is null)
+                return Results.NotFound();
+
+            db.DevicesInfo.Remove(device);
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        })
+        .WithName("DeleteDevice");
+
+        group.MapPut("/{id}", async (int id, DeviceInfo updated, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            if (device is null)
+                return Results.NotFound();
+
+            device.UserDefinedName = updated.UserDefinedName;
+            device.DeviceType = updated.DeviceType;
+            await db.SaveChangesAsync();
+            return Results.Ok(device);
+        })
+        .WithName("UpdateDevice");
     }
 }

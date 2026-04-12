@@ -1,16 +1,17 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 using NetLine.Domain.Entities;
+using NetLine.Infrastructure;
 
 namespace NetLine.Infrastructure.Data;
 
-public class AppDbContext : IdentityDbContext<IdentityUser>
+public class AppDbContext : IdentityDbContext<AppUser>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<DeviceInfo> DevicesInfo => Set<DeviceInfo>();
     public DbSet<DeviceAlert> DeviceAlerts { get; set; }
+    public DbSet<Office> Offices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,5 +26,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             .WithMany()
             .HasForeignKey(da => da.DeviceInfoId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DeviceInfo>()
+            .HasOne(d => d.Office)
+            .WithMany(o => o.Devices)
+            .HasForeignKey(d => d.OfficeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

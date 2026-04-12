@@ -1,0 +1,153 @@
+﻿@using NetLine.Domain.Entities
+@using NetLine.Web.Services
+@inject DeviceApiClient ApiClient
+
+@if (IsVisible)
+{
+    <div class="card p-4 mb-4 shadow-sm" style="max-width: 600px;">
+        <h5 class="mb-3">@(Device == null ? "Nowe urządzenie" : "Edytuj urządzenie")</h5>
+
+        @if (Device == null)
+        {
+            <div class="d-flex align-items-center justify-content-between">
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" @bind:event="oninput" placeholder="192" style="width: 70px; -moz-appearance: textfield;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" @bind:event="oninput" placeholder="168" style="width: 70px; -moz-appearance: textfield;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip3" @bind:event="oninput" placeholder="0" style="width: 70px; -moz-appearance: textfield;" />
+                <span class="fw-bold">.</span>
+                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip4" @bind:event="oninput" placeholder="1" style="width: 70px; -moz-appearance: textfield;" />
+            </div>
+            @if (isIpInvalid)
+                {
+                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle"></i> Podaj poprawne liczby (0-255).</div>
+                }
+            
+        }
+        else
+        {
+            <div class="mb-3">
+                <label class="form-label fw-bold">Adres IP</label>
+                <input class="form-control" value="@Device.IpAddress" disabled />
+                <small class="text-muted">Adresu IP nie można zmienić.</small>
+            </div>
+        }
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nazwa urządzenia</label>
+            <input @bind="deviceLabel" class="form-control" placeholder="np. Drukarka w pokoju 112" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Typ urządzenia</label>
+            <select class="form-select" @bind="deviceType">
+                <option value="Computer">Computer</option>
+                <option value="Server">Server</option>
+                <option value="Switch">Switch</option>
+                <option value="Printer">Printer</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Smartphone">Smartphone</option>
+                <option value="Tablet">Tablet</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="Submit" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                    <span> Zapisywanie...</span>
+                }
+                else
+                {
+                    <span>@(Device == null ? "Dodaj" : "Zapisz")</span>
+                }
+            </button>
+            <button class="btn btn-outline-secondary w-100" @onclick="Cancel">Anuluj</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public DeviceInfo? Device { get; set; }
+    [Parameter] public int OfficeId { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string ip1 = "", ip2 = "", ip3 = "", ip4 = "";
+    private string deviceLabel = "";
+    private string deviceType = "Computer";
+    private bool isLoading = false;
+    private bool isIpInvalid = false;
+    private string? errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (Device != null)
+        {
+            deviceLabel = Device.UserDefinedName;
+            deviceType = Device.DeviceType;
+        }
+        else
+        {
+            deviceLabel = "";
+            deviceType = "Computer";
+            ip1 = ip2 = ip3 = ip4 = "";
+        }
+    }
+
+    private async Task Submit()
+    {
+        errorMessage = null;
+        isIpInvalid = false;
+
+        if (Device == null)
+        {
+            if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
+            {
+                isIpInvalid = true;
+                return;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(deviceLabel))
+        {
+            errorMessage = "Nazwa urządzenia jest wymagana.";
+            return;
+        }
+
+        isLoading = true;
+
+        if (Device == null)
+        {
+            string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
+            var (success, error) = await ApiClient.AddDeviceAsync(fullIp, deviceLabel, deviceType, OfficeId);
+            if (success)
+                await OnSuccess.InvokeAsync();
+            else
+                errorMessage = error ?? "Nie udało się dodać urządzenia.";
+        }
+        else
+        {
+            var success = await ApiClient.UpdateDeviceAsync(Device.Id, deviceLabel, deviceType);
+            if (success)
+                await OnSuccess.InvokeAsync();
+            else
+                errorMessage = "Nie udało się zaktualizować urządzenia.";
+        }
+
+        isLoading = false;
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+
+    private bool IsValidByte(string input) =>
+        int.TryParse(input, out int result) && result >= 0 && result <= 255;
+}
