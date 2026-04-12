@@ -140,7 +140,7 @@ else
                                                 @(device.SysDescr ?? "Brak opisu.")
                                             </small>
                                             <div class="mt-2">
-                                                <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick="() => Nav.NavigateTo($"/devices/{device.Id}")">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick='() => Nav.NavigateTo($"/devices/{device.Id}")'>
                                                     <i class="bi bi-bar-chart"></i> Szczegóły i wykresy
                                                 </button>
                                             </div>

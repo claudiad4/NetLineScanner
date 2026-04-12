@@ -96,7 +96,7 @@ else
         @foreach (var office in offices)
         {
             <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100 office-card" @onclick="() => Nav.NavigateTo($"/offices/{office.Id}")">
+                <div class="card shadow-sm h-100 office-card" @onclick='() => Nav.NavigateTo($"/offices/{office.Id}")'>
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
                             <div class="office-icon me-3">

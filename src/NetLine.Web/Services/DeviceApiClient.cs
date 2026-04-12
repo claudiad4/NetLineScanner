@@ -47,4 +47,7 @@ public class DeviceApiClient(HttpClient httpClient)
 
     public async Task<List<DeviceInfo>> GetDevicesByOfficeAsync(int officeId)
     => await httpClient.GetFromJsonAsync<List<DeviceInfo>>($"api/devices?officeId={officeId}") ?? [];
+
+    public async Task<DeviceInfo?> GetDeviceAsync(int id)
+    => await httpClient.GetFromJsonAsync<DeviceInfo>($"api/devices/{id}");
 }

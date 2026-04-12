@@ -37,5 +37,12 @@ public static class DeviceEndpoints
             return Results.Ok(await query.ToListAsync());
         })
         .WithName("GetDevicesList");
+
+        group.MapGet("/{id}", async (int id, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            return device is null ? Results.NotFound() : Results.Ok(device);
+        })
+        .WithName("GetDevice");
     }
 }
