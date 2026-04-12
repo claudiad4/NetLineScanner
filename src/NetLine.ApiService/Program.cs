@@ -89,6 +89,7 @@ app.MapDefaultEndpoints();
 app.MapHub<DeviceHub>("/devicehub");
 app.MapGet("/", () => "NetLine API - Monitoring system is ready.");
 app.MapDeviceEndpoints();
+app.MapOfficeEndpoints();
 
 // Map Identity endpoints
 app.MapIdentityApi<IdentityUser>();
