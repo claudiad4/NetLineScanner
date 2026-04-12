@@ -9,8 +9,15 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddHttpClient<DeviceApiClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["services:apiservice:http:0"] 
-        ?? builder.Configuration["services:apiservice:https:0"] 
+    client.BaseAddress = new Uri(builder.Configuration["services:apiservice:http:0"]
+        ?? builder.Configuration["services:apiservice:https:0"]
+        ?? "http://localhost:5000");
+});
+
+builder.Services.AddHttpClient<AlertApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["services:apiservice:http:0"]
+        ?? builder.Configuration["services:apiservice:https:0"]
         ?? "http://localhost:5000");
 });
 
