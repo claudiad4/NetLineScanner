@@ -1,7 +1,7 @@
 ﻿using System.Net.NetworkInformation;
-using NetLine.Application.Interfaces;
+using NetLine.Application.Interfaces.Monitoring;
 
-namespace NetLine.Infrastructure.Services;
+namespace NetLine.Infrastructure.Services.Monitoring;
 
 public class ICMPService : IICMPService
 {

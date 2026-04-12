@@ -6,7 +6,7 @@
 
 <PageTitle>Dodaj Urządzenie</PageTitle>
 
-@* toast and validation*@
+@* toast and validation *@
 <style>
     .custom-toast {
         position: fixed;
@@ -123,9 +123,7 @@
         }
     </div>
 </div>
-
 @code {
-    // fancy form
     private string ip1 = "";
     private string ip2 = "";
     private string ip3 = "";
@@ -135,8 +133,8 @@
     private string deviceType = "Computer";
 
     private bool isLoading = false;
-    private bool showSuccessToast = false; 
-    private bool isIpInvalid = false;     
+    private bool showSuccessToast = false;
+    private bool isIpInvalid = false;
     private string? errorMessage;
 
     private async Task Submit()
@@ -145,7 +143,6 @@
         errorMessage = null;
         isIpInvalid = false;
 
-        // validation - we can add more HERE
         if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
         {
             isIpInvalid = true;
@@ -158,22 +155,20 @@
 
         try
         {
-            var success = await ApiClient.AddDeviceAsync(fullIp, label, deviceType);
+            var (success, apiError) = await ApiClient.AddDeviceAsync(fullIp, label, deviceType);
 
             if (success)
             {
-                
                 showSuccessToast = true;
                 isLoading = false;
-                StateHasChanged(); 
+                StateHasChanged();
 
-                
                 await Task.Delay(2000);
                 Nav.NavigateTo("/devices");
             }
             else
             {
-                errorMessage = "ERROR: is IP okay?.";
+                errorMessage = apiError ?? "Failed to add device.";
                 isLoading = false;
             }
         }
@@ -184,14 +179,11 @@
         }
     }
 
-    // validation for IP input - only numbers between 0 and 255
     private bool IsValidByte(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return false;
         if (int.TryParse(input, out int result))
-        {
             return result >= 0 && result <= 255;
-        }
         return false;
     }
 }

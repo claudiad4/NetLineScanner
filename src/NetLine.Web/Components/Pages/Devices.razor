@@ -4,10 +4,11 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @rendermode InteractiveServer
 @inject DeviceApiClient ApiClient
+@inject AlertNotificationService AlertService
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"> @* icons library *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <PageTitle>Monitor Urządzeń</PageTitle>
 
@@ -56,6 +57,23 @@
         border-radius: 4px;
     }
 
+    .main-container {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    @@media (max-width: 1200px) {
+        .main-container {
+            grid-template-columns: 1fr;
+        }
+
+        .alerts-panel {
+            order: -1;
+        }
+    }
+
     @@keyframes fadeIn {
         from {
             opacity: 0;
@@ -78,116 +96,123 @@
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
-        <p class="mt-2 text-muted">Innitiating monitoring...</p>
+        <p class="mt-2 text-muted">Initializing monitoring...</p>
     </div>
 }
 else
 {
-    <div class="table-responsive shadow-sm rounded">
-        <table class="table align-middle bg-white table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th style="width: 40px;"></th>
-                    <th style="width: 130px;">Status</th>
-                    <th style="width: 140px;">Protocol</th>
-                    <th>Device</th>
-                    <th>IP address</th>
-                    <th>Last scanned</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var device in devices)
-                {
-                    <tr @onclick="() => ToggleDetails(device.Id)">
-                        <td class="text-center">
-                            <i class="bi @(expandedDeviceId == device.Id ? "bi-chevron-down text-purple" : "bi-chevron-right text-muted")"></i>
-                        </td>
-                        <td>
-                            @{
-                                // Tutaj definiujemy kolory dla każdego stanu
-                                var statusClass = device.Status switch
-                                {
-                                    "Online" => "bg-success",
-                                    "Limited" => "bg-warning text-dark", // Żółty dla przypadków "pół-działa"
-                                    "Offline" => "bg-danger",
-                                    _ => "bg-secondary"
-                                };
+    <div class="main-container">
+        <div>
+            <div class="table-responsive shadow-sm rounded">
+                <table class="table align-middle bg-white table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th style="width: 130px;">Status</th>
+                            <th style="width: 140px;">Protocol</th>
+                            <th>Device</th>
+                            <th>IP address</th>
+                            <th>Last scanned</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var device in devices)
+                        {
+                            <tr @onclick="() => ToggleDetails(device.Id)">
+                                <td class="text-center">
+                                    <i class="bi @(expandedDeviceId == device.Id ? "bi-chevron-down text-purple" : "bi-chevron-right text-muted")"></i>
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = device.Status switch
+                                        {
+                                            "Online" => "bg-success",
+                                            "Limited" => "bg-warning text-dark",
+                                            "Offline" => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
 
-                                var iconClass = device.Status switch
-                                {
-                                    "Online" => "bi-check-circle",
-                                    "Limited" => "bi-exclamation-circle",
-                                    "Offline" => "bi-x-circle",
-                                    _ => "bi-question-circle"
-                                };
-                            }
-                            <span class="badge rounded-pill @statusClass w-100 shadow-sm">
-                                <i class="bi @iconClass"></i> @device.Status
-                            </span>
-                        </td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
-                                <span class="badge @(!string.IsNullOrEmpty(device.SysUpTime) && device.SysUpTime != "No data" ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center"> @* icon in circle *@
-                                <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
-                                     style="width: 40px; height: 40px; background-color: #e9ecef; color: black;">
-                                    <i class="bi @GetIconForType(device.DeviceType)" style="font-size: 1.2rem;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold">@device.UserDefinedName</div>
-                                    <small class="text-muted d-block" style="margin-top: -4px;">
-                                        <i class="bi bi-tag"></i> @device.DeviceType
-                                    </small>
-                                </div>
-                            </div>
-                        </td>
-                        <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
-                        <td><small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
-                    </tr>
-
-                    @if (expandedDeviceId == device.Id)
-                    {
-                        <tr class="detail-row">
-                            <td colspan="6">
-                                <div class="details-container">
-                                    <div class="row">
-                                        <div class="col-md-4 border-end">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> System</h6>
-                                            <p class="mb-1 small"><strong>Name (SNMP):</strong> @(device.SysName ?? "No data")</p>
-                                            <p class="mb-1 small"><strong>Localisation of device:</strong> @(device.SysLocation ?? "No data")</p>
-                                            <p class="mb-1 small"><strong>Person responsible for device:</strong> @(device.SysContact ?? "No data")</p>
+                                        var iconClass = device.Status switch
+                                        {
+                                            "Online" => "bi-check-circle",
+                                            "Limited" => "bi-exclamation-circle",
+                                            "Offline" => "bi-x-circle",
+                                            _ => "bi-question-circle"
+                                        };
+                                    }
+                                    <span class="badge rounded-pill @statusClass w-100 shadow-sm">
+                                        <i class="bi @iconClass"></i> @device.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
+                                        <span class="badge @(!string.IsNullOrEmpty(device.SysUpTime) && device.SysUpTime != "No data" ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                             style="width: 40px; height: 40px; background-color: #e9ecef; color: black;">
+                                            <i class="bi @GetIconForType(device.DeviceType)" style="font-size: 1.2rem;"></i>
                                         </div>
-                                        <div class="col-md-4 border-end">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status</h6>
-                                            <p class="mb-1 small"><strong>UpTime:</strong> @(device.SysUpTime ?? "No data")</p>
-                                            <p class="mb-1 small"><strong>Interfaces:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
-                                            <p class="mb-1 small"><strong>Last PING:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Other info</h6>
-                                            <small class="text-muted" style="font-size: 0.75rem;">
-                                                @if (string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "No data")
-                                                {
-                                                    <span>@(device.PingResponseTimeMs.HasValue ? "Ping OK, SNMP not working." : "Device is unreachable.")</span>
-                                                }
-                                                else
-                                                {
-                                                    @(device.SysDescr ?? "SNMP Data.")
-                                                }
+                                        <div>
+                                            <div class="fw-bold">@device.UserDefinedName</div>
+                                            <small class="text-muted d-block" style="margin-top: -4px;">
+                                                <i class="bi bi-tag"></i> @device.DeviceType
                                             </small>
                                         </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
+                                </td>
+                                <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
+                                <td><small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
+                            </tr>
+
+                            @if (expandedDeviceId == device.Id)
+                            {
+                                <tr class="detail-row">
+                                    <td colspan="6">
+                                        <div class="details-container">
+                                            <div class="row">
+                                                <div class="col-md-4 border-end">
+                                                    <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> System</h6>
+                                                    <p class="mb-1 small"><strong>Name (SNMP):</strong> @(device.SysName ?? "No data")</p>
+                                                    <p class="mb-1 small"><strong>Localisation of device:</strong> @(device.SysLocation ?? "No data")</p>
+                                                    <p class="mb-1 small"><strong>Person responsible for device:</strong> @(device.SysContact ?? "No data")</p>
+                                                </div>
+                                                <div class="col-md-4 border-end">
+                                                    <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status</h6>
+                                                    <p class="mb-1 small"><strong>UpTime:</strong> @(device.SysUpTime ?? "No data")</p>
+                                                    <p class="mb-1 small"><strong>Interfaces:</strong> @(device.SysInterfacesCount?.ToString() ?? "---")</p>
+                                                    <p class="mb-1 small"><strong>Last PING:</strong> @(device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Other info</h6>
+                                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                                        @if (string.IsNullOrEmpty(device.SysUpTime) || device.SysUpTime == "No data")
+                                                        {
+                                                            <span>@(device.PingResponseTimeMs.HasValue ? "Ping OK, SNMP not working." : "Device is unreachable.")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            @(device.SysDescr ?? "SNMP Data.")
+                                                        }
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <AlertsHistoryPanel />
+        </div>
     </div>
 }
 
@@ -195,10 +220,10 @@ else
     private List<DeviceInfo>? devices;
     private HubConnection? hubConnection;
     private int? expandedDeviceId;
+    private List<DeviceAlert> recentAlerts = new();
 
     private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
 
- //match name of the device to icon
     private string GetIconForType(string? type)
     {
         if (string.IsNullOrEmpty(type)) return "bi-three-dots";
@@ -232,15 +257,33 @@ else
                 await LoadData();
                 await InvokeAsync(StateHasChanged);
             });
+
+            hubConnection.On<DeviceAlert>("AlertCreated", (alert) =>
+            {
+                AlertService.AddNotification(alert);
+                InvokeAsync(StateHasChanged);
+            });
+
             await hubConnection.StartAsync();
         }
     }
 
     private async Task LoadData()
     {
-        try { devices = await ApiClient.GetDevicesAsync(); }
-        catch (Exception ex) { Console.WriteLine($"ERROR: {ex.Message}"); }
+        try 
+        { 
+            devices = await ApiClient.GetDevicesAsync();
+            recentAlerts = await ApiClient.GetAlertsAsync(limit: 5);
+        }
+        catch (Exception ex) 
+        { 
+            Console.WriteLine($"ERROR: {ex.Message}"); 
+        }
     }
 
-    public async ValueTask DisposeAsync() { if (hubConnection is not null) await hubConnection.DisposeAsync(); }
+    public async ValueTask DisposeAsync() 
+    { 
+        if (hubConnection is not null) 
+            await hubConnection.DisposeAsync(); 
+    }
 }

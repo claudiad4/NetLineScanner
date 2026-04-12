@@ -2,14 +2,18 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NetLine.Infrastructure.Data;
-using NetLine.Infrastructure.Services;
-using NetLine.Application.Interfaces;
 using NetLine.ApiService.Hubs;
 using NetLine.ApiService.Services;
 using NetLine.ApiService.Endpoints;
+using NetLine.Application.Interfaces.Scanning;
+using NetLine.Application.Interfaces.Monitoring;
+using NetLine.Application.Interfaces.Alerts;
+using NetLine.Application.Interfaces.Devices;
+using NetLine.Infrastructure.Services.Scanning;
+using NetLine.Infrastructure.Services.Alerts;
+using NetLine.Infrastructure.Services.Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.AddServiceDefaults();
 
 // Add DbContext with PostgreSQL
@@ -21,15 +25,17 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
-    options.SignIn.RequireConfirmedEmail = false; // To i tak wyłączamy
+    options.SignIn.RequireConfirmedEmail = false;
 })
-
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
 // Add application services
 builder.Services.AddSingleton<ISNMPService, SnmpService>();
 builder.Services.AddSingleton<IICMPService, ICMPService>();
+builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
+builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
+builder.Services.AddScoped<IDeviceManager, DeviceManager>();
 builder.Services.AddHostedService<DeviceMonitorService>();
 
 // Add API services
@@ -67,6 +73,14 @@ app.UseHttpsRedirection();
 app.UseCors("AllowBlazor");
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseExceptionHandler(err => err.Run(async ctx =>
+{
+    var ex = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    ctx.Response.StatusCode = ex is InvalidOperationException ? 400 : 500;
+    await ctx.Response.WriteAsJsonAsync(new { error = ex?.Message });
+}));
+
 app.UseStaticFiles();
 app.UseAntiforgery();
 

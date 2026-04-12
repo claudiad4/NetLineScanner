@@ -2,11 +2,11 @@
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Microsoft.Extensions.Logging;
-using NetLine.Application.Interfaces;
 using NetLine.Domain.Models;
 using NetLine.Domain.Entities;
+using NetLine.Application.Interfaces.Monitoring;
 
-namespace NetLine.Infrastructure.Services;
+namespace NetLine.Infrastructure.Services.Monitoring;
 
 public class SnmpService : ISNMPService
 {

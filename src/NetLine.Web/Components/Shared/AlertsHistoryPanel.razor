@@ -1,0 +1,203 @@
+@using NetLine.Web.Services
+@using NetLine.Domain.Entities
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+@inject DeviceApiClient ApiClient
+@inject IConfiguration Config
+
+<div class="alerts-panel">
+    <div class="panel-header">
+        <h5 class="mb-0">
+            <i class="bi bi-bell-fill text-warning"></i> Recent Alerts
+            @if (unreadCount > 0)
+            {
+                <span class="badge bg-danger rounded-pill ms-2">@unreadCount</span>
+            }
+        </h5>
+        @if (alerts.Count > 0)
+        {
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearAllAlerts">
+                <i class="bi bi-trash"></i> Clear
+            </button>
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
+            <p class="text-muted small mt-2">Loading alerts...</p>
+        </div>
+    }
+    else if (alerts.Count == 0)
+    {
+        <div class="text-center py-4">
+            <i class="bi bi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+            <p class="text-muted small mt-2">No alerts yet</p>
+        </div>
+    }
+    else
+    {
+        <div class="alerts-list">
+            @foreach (var alert in alerts)
+            {
+                var isOffline = alert.Type == AlertType.WentOffline;
+                <div class="alert-item @(isOffline ? "border-danger" : "border-success")">
+                    <div class="d-flex gap-2">
+                        <div class="alert-icon">
+                            <i class="bi @(isOffline ? "bi-x-circle-fill" : "bi-check-circle-fill") 
+                               @(isOffline ? "text-danger" : "text-success")" 
+                               style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <p class="mb-1 small">
+                                <strong>@alert.Message</strong>
+                            </p>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> @alert.Timestamp.ToLocalTime().ToString("HH:mm:ss")
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .alerts-panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+    }
+
+    .panel-header {
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8f9fa;
+    }
+
+    .alerts-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .alert-item {
+        padding: 12px 15px;
+        border-left: 3px solid #dee2e6;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .alert-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .alert-item.border-danger {
+        border-left-color: #dc3545;
+    }
+
+    .alert-item.border-success {
+        border-left-color: #28a745;
+    }
+
+    .alert-icon {
+        min-width: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .alerts-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .alerts-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .alerts-list::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    .alerts-list::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
+@code {
+    private List<DeviceAlert> alerts = new();
+    private HubConnection? hubConnection;
+    private bool isLoading = true;
+    private int unreadCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAlerts();
+        await InitializeSignalRConnection();
+    }
+
+    private async Task LoadAlerts()
+    {
+        try
+        {
+            isLoading = true;
+            alerts = await ApiClient.GetAlertsAsync(limit: 20);
+            unreadCount = alerts.Count(a => !a.IsRead);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading alerts: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task InitializeSignalRConnection()
+    {
+        var apiBaseUrl = Config["services:apiservice:http:0"] ?? Config["services:apiservice:https:0"];
+        if (string.IsNullOrEmpty(apiBaseUrl))
+            return;
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl($"{apiBaseUrl}/devicehub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<int>("AlertCreated", async (deviceId) =>
+        {
+            await LoadAlerts();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR connection error: {ex.Message}");
+        }
+    }
+
+    private async Task ClearAllAlerts()
+    {
+        alerts.Clear();
+        unreadCount = 0;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
+    }
+}

@@ -1,0 +1,88 @@
+@using NetLine.Web.Services
+@using NetLine.Domain.Entities;
+@inject AlertNotificationService AlertService
+
+<div class="toast-container">
+    @foreach (var notification in AlertService.GetNotifications())
+    {
+        <div class="alert-toast @notification.GetBgClass() @notification.GetTextClass() shadow-lg" 
+             role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi @notification.GetIcon()" style="font-size: 1.3rem;"></i>
+                <div class="flex-grow-1">
+                    <strong>@(notification.Alert.Type == AlertType.WentOffline ? "Device Offline" : "Device Online")</strong>
+                    <p class="mb-0 small mt-1">@notification.Alert.Message</p>
+                </div>
+                <button type="button" class="btn-close" 
+                        @onclick="() => AlertService.RemoveNotification(notification.Id)"
+                        style="filter: brightness(0) invert(1);">
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 400px;
+    }
+
+    .alert-toast {
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        animation: slideInRight 0.3s ease-out;
+        min-width: 300px;
+    }
+
+    @@media (animation-name: slideInRight) {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .btn-close {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    @@media (max-width: 576px) {
+        .toast-container {
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+
+        .alert-toast {
+            min-width: auto;
+        }
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AlertService.OnNotificationAdded += StateHasChanged;
+        AlertService.OnNotificationRemoved += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AlertService.OnNotificationAdded -= StateHasChanged;
+        AlertService.OnNotificationRemoved -= StateHasChanged;
+    }
+}

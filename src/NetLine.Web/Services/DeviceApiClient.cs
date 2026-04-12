@@ -1,0 +1,47 @@
+using NetLine.Domain.Entities;
+using NetLine.Domain.Models;
+
+namespace NetLine.Web.Services;
+
+public class DeviceApiClient(HttpClient httpClient)
+{
+    public async Task<List<DeviceInfo>> GetDevicesAsync()
+        => await httpClient.GetFromJsonAsync<List<DeviceInfo>>("api/devices") ?? [];
+
+    public async Task<(bool Success, string? Error)> AddDeviceAsync(string ip, string label, string type)
+    {
+        var request = new AddDeviceRequest(ip, label, type);
+        var response = await httpClient.PostAsJsonAsync("api/devices", request);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"[AddDevice] Status: {response.StatusCode}, Body: {body}");
+
+        if (response.IsSuccessStatusCode)
+            return (true, null);
+
+        if (string.IsNullOrWhiteSpace(body))
+            return (false, $"Error: {response.StatusCode}");
+
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(body);
+            return (false, json?.GetValueOrDefault("error") ?? body);
+        }
+        catch
+        {
+            return (false, body);
+        }
+    }
+
+    public async Task<List<DeviceAlert>> GetAlertsAsync(int? deviceId = null, int limit = 50)
+    {
+        var url = deviceId.HasValue
+            ? $"api/alerts?deviceId={deviceId}&limit={limit}"
+            : $"api/alerts?limit={limit}";
+        return await httpClient.GetFromJsonAsync<List<DeviceAlert>>(url) ?? [];
+    }
+
+    public async Task<bool> MarkAlertAsReadAsync(int alertId)
+        => (await httpClient.PutAsync($"api/alerts/{alertId}/read", null))
+           .IsSuccessStatusCode;
+}

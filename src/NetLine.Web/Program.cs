@@ -1,31 +1,20 @@
+using NetLine.Web;
 using NetLine.Web.Components;
 using NetLine.Web.Services;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register HTTP clients
 builder.Services.AddHttpClient<DeviceApiClient>(client =>
 {
-    client.BaseAddress = new("https+http://apiservice");
+    client.BaseAddress = new Uri(builder.Configuration["services:apiservice:http:0"] 
+        ?? builder.Configuration["services:apiservice:https:0"] 
+        ?? "http://localhost:5000");
 });
 
-builder.Services.AddHttpClient<AlertApiClient>(client =>
-{
-    client.BaseAddress = new("https+http://apiservice");
-});
-
-//builder.Services.AddHttpClient<AuthApiClient>(client =>
-//{
-//    client.BaseAddress = new("https+http://apiservice");
-//});
+builder.Services.AddSingleton<AlertNotificationService>();
 
 var app = builder.Build();
 
@@ -41,7 +30,5 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-app.MapDefaultEndpoints();
 
 app.Run();

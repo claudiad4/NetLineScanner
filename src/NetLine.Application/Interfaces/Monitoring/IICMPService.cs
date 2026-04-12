@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NetLine.Application.Interfaces
+namespace NetLine.Application.Interfaces.Monitoring
 {
-    public interface ISNMPService
+    public interface IICMPService
     {
-        Task<SNMPScanResult> GetDeviceInfoAsync(string ipAddress);
+        Task<long?> GetPingResponseTimeAsync(string ipAddress);
     }
 }
