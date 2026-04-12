@@ -48,4 +48,17 @@ public class DeviceApiClient(HttpClient httpClient)
 
     public async Task<DeviceInfo?> GetDeviceAsync(int id)
     => await httpClient.GetFromJsonAsync<DeviceInfo>($"api/devices/{id}");
+
+    public async Task<bool> DeleteDeviceAsync(int id)
+    => (await httpClient.DeleteAsync($"api/devices/{id}")).IsSuccessStatusCode;
+
+    public async Task<bool> UpdateDeviceAsync(int id, string userDefinedName, string deviceType)
+    {
+        var response = await httpClient.PutAsJsonAsync($"api/devices/{id}", new
+        {
+            UserDefinedName = userDefinedName,
+            DeviceType = deviceType
+        });
+        return response.IsSuccessStatusCode;
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NetLine.Application.Interfaces.Devices;
+using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Data;
 
@@ -39,5 +40,30 @@ public static class DeviceEndpoints
             return Results.Created($"/api/devices/{device.Id}", device);
         })
         .WithName("CreateNewDevice");
+
+        group.MapDelete("/{id}", async (int id, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            if (device is null)
+                return Results.NotFound();
+
+            db.DevicesInfo.Remove(device);
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        })
+        .WithName("DeleteDevice");
+
+        group.MapPut("/{id}", async (int id, DeviceInfo updated, AppDbContext db) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            if (device is null)
+                return Results.NotFound();
+
+            device.UserDefinedName = updated.UserDefinedName;
+            device.DeviceType = updated.DeviceType;
+            await db.SaveChangesAsync();
+            return Results.Ok(device);
+        })
+        .WithName("UpdateDevice");
     }
 }

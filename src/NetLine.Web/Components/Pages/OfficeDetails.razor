@@ -14,61 +14,14 @@
 <PageTitle>@(office?.Name ?? "Biuro")</PageTitle>
 
 <style>
-    .text-purple {
-        color: #6f42c1 !important;
-    }
-
-    .bg-soft-success {
-        background-color: #d1e7dd !important;
-        color: #0f5132 !important;
-        border: 1px solid #badbcc !important;
-    }
-
-    .bg-soft-danger {
-        background-color: #f8d7da !important;
-        color: #842029 !important;
-        border: 1px solid #f5c2c7 !important;
-    }
-
-    .detail-row {
-        background-color: #f8faff;
-        animation: fadeIn 0.3s ease-out;
-    }
-
-    .details-container {
-        padding: 20px;
-        border-left: 5px solid #6f42c1;
-        margin: 10px 0 10px 40px;
-        background: white;
-        border-radius: 0 8px 8px 0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-
-    .table-hover tbody tr:not(.detail-row):hover {
-        background-color: rgba(111, 66, 193, 0.05);
-        cursor: pointer;
-    }
-
-    .badge-tech {
-        font-size: 0.7rem;
-        padding: 4px 8px;
-        font-weight: bold;
-        min-width: 55px;
-        text-align: center;
-        border-radius: 4px;
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-5px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    .text-purple { color: #6f42c1 !important; }
+    .bg-soft-success { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #badbcc !important; }
+    .bg-soft-danger { background-color: #f8d7da !important; color: #842029 !important; border: 1px solid #f5c2c7 !important; }
+    .detail-row { background-color: #f8faff; animation: fadeIn 0.3s ease-out; }
+    .details-container { padding: 20px; border-left: 5px solid #6f42c1; margin: 10px 0 10px 40px; background: white; border-radius: 0 8px 8px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .table-hover tbody tr:not(.detail-row):hover { background-color: rgba(111, 66, 193, 0.05); cursor: pointer; }
+    .badge-tech { font-size: 0.7rem; padding: 4px 8px; font-weight: bold; min-width: 55px; text-align: center; border-radius: 4px; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 
 @* Nagłówek *@
@@ -83,69 +36,18 @@
             <small class="text-muted"><i class="bi bi-geo-alt"></i> @office.Location</small>
         }
     </div>
-    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="() => showForm = !showForm">
-        <i class="bi bi-plus-lg"></i> Dodaj urządzenie
+    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="ToggleAddForm">
+        <i class="bi bi-plus-lg"></i> Add device
     </button>
 </div>
 
-@* Formularz dodawania urządzenia *@
-@if (showForm)
-{
-    <div class="card p-4 mb-4 shadow-sm" style="max-width: 600px;">
-        <h5 class="mb-3">Nowe urządzenie</h5>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Adres IP</label>
-            <div class="d-flex align-items-center justify-content-between">
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" placeholder="192" style="width: 70px;" />
-                <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" placeholder="168" style="width: 70px;" />
-                <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip3" placeholder="0" style="width: 70px;" />
-                <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip4" placeholder="1" style="width: 70px;" />
-            </div>
-            @if (isIpInvalid)
-            {
-                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle"></i> Podaj poprawne liczby (0-255).</div>
-            }
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Nazwa urządzenia</label>
-            <input @bind="deviceLabel" class="form-control" placeholder="np. Drukarka w pokoju 112" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Typ urządzenia</label>
-            <select class="form-select" @bind="deviceType">
-                <option value="Computer">Computer</option>
-                <option value="Server">Server</option>
-                <option value="Switch">Switch</option>
-                <option value="Printer">Printer</option>
-                <option value="Laptop">Laptop</option>
-                <option value="Smartphone">Smartphone</option>
-                <option value="Tablet">Tablet</option>
-                <option value="Other">Other</option>
-            </select>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="AddDevice" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span class="spinner-border spinner-border-sm"></span>
-                    <span> Dodawanie...</span>
-                }
-                else
-                {
-                    <span>Dodaj</span>
-                }
-            </button>
-            <button class="btn btn-outline-secondary w-100" @onclick="() => showForm = false">Anuluj</button>
-        </div>
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger mt-3">@errorMessage</div>
-        }
-    </div>
-}
+@* Formularz *@
+<DeviceForm
+    IsVisible="showForm"
+    Device="editingDevice"
+    OfficeId="Id"
+    OnSuccess="OnDeviceFormSuccess"
+    OnCancel="OnDeviceFormCancel" />
 
 @* Lista urządzeń *@
 @if (devices == null)
@@ -174,6 +76,7 @@ else
                     <th>Urządzenie</th>
                     <th>Adres IP</th>
                     <th>Ostatni skan</th>
+                    <th style="width: 100px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -223,13 +126,27 @@ else
                             </div>
                         </td>
                         <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
-                        <td><small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center">
+                                <small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1" @onclick:stopPropagation="true">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditDevice(device)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteDevice(device.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
 
                     @if (expandedDeviceId == device.Id)
                     {
                         <tr class="detail-row">
-                            <td colspan="6">
+                            <td colspan="7">
                                 <div class="details-container">
                                     <div class="row">
                                         <div class="col-md-4 border-end">
@@ -273,15 +190,8 @@ else
     private List<DeviceInfo>? devices;
     private int? expandedDeviceId;
     private HubConnection? hubConnection;
-
-    // Formularz
     private bool showForm = false;
-    private bool isLoading = false;
-    private bool isIpInvalid = false;
-    private string? errorMessage;
-    private string ip1 = "", ip2 = "", ip3 = "", ip4 = "";
-    private string deviceLabel = "";
-    private string deviceType = "Computer";
+    private DeviceInfo? editingDevice;
 
     private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
 
@@ -297,46 +207,32 @@ else
         _ => "bi-three-dots"
     };
 
-    private async Task AddDevice()
+    private void EditDevice(DeviceInfo device)
     {
-        isIpInvalid = false;
-        errorMessage = null;
-
-        if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
-        {
-            isIpInvalid = true;
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(deviceLabel))
-        {
-            errorMessage = "Nazwa urządzenia jest wymagana.";
-            return;
-        }
-
-        isLoading = true;
-        string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
-
-        var (success, error) = await DeviceClient.AddDeviceAsync(fullIp, deviceLabel, deviceType, Id);
-
-        if (success)
-        {
-            ip1 = ip2 = ip3 = ip4 = "";
-            deviceLabel = "";
-            deviceType = "Computer";
-            showForm = false;
-            devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
-        }
-        else
-        {
-            errorMessage = error ?? "Nie udało się dodać urządzenia.";
-        }
-
-        isLoading = false;
+        editingDevice = device;
+        showForm = true;
     }
 
-    private bool IsValidByte(string input) =>
-        int.TryParse(input, out int result) && result >= 0 && result <= 255;
+    private async Task DeleteDevice(int id)
+    {
+        await DeviceClient.DeleteDeviceAsync(id);
+        devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+    }
+
+    private async Task OnDeviceFormSuccess()
+    {
+        showForm = false;
+        editingDevice = null;
+        devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
+        StateHasChanged();
+    }
+
+    private Task OnDeviceFormCancel()
+    {
+        showForm = false;
+        editingDevice = null;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -377,5 +273,11 @@ else
     {
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
+    }
+
+    private void ToggleAddForm()
+    {
+        editingDevice = null;
+        showForm = !showForm;
     }
 }
