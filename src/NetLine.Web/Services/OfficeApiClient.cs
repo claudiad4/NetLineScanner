@@ -1,4 +1,4 @@
-﻿using NetLine.Domain.Entities;
+using NetLine.Domain.Entities;
 
 namespace NetLine.Web.Services;
 
@@ -11,6 +11,21 @@ public class OfficeApiClient(HttpClient httpClient)
     {
         var office = new Office { Name = name, Location = location };
         var response = await httpClient.PostAsJsonAsync("api/offices", office);
+
+        if (response.IsSuccessStatusCode)
+            return (true, null);
+
+        var body = await response.Content.ReadAsStringAsync();
+        return (false, string.IsNullOrWhiteSpace(body) ? $"Error: {response.StatusCode}" : body);
+    }
+
+    public async Task<(bool Success, string? Error)> UpdateOfficeAsync(int id, string name, string? location)
+    {
+        var response = await httpClient.PutAsJsonAsync($"api/offices/{id}", new
+        {
+            Name = name,
+            Location = location
+        });
 
         if (response.IsSuccessStatusCode)
             return (true, null);

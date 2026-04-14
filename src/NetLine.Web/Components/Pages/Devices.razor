@@ -1,10 +1,13 @@
-﻿@page "/devices"
+@page "/devices"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using NetLine.Web.Services
 @using NetLine.Domain.Entities;
 @using Microsoft.AspNetCore.SignalR.Client
 @rendermode InteractiveServer
 @inject DeviceApiClient ApiClient
+@inject AlertApiClient AlertClient
 @inject AlertNotificationService AlertService
+@inject CurrentUserService CurrentUser
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
@@ -88,11 +91,26 @@
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-speedometer2 text-purple"></i> Device monitoring</h1>
+    <h1>
+        <i class="bi bi-speedometer2 text-purple"></i>
+        Device monitoring
+        @if (!isAdmin && user?.OfficeId is not null)
+        {
+            <small class="text-muted ms-2" style="font-size: 0.9rem;">
+                (tylko moje biuro)
+            </small>
+        }
+    </h1>
     <span class="badge bg-success border shadow-sm p-2">Status: Live</span>
 </div>
 
-@if (devices == null)
+@if (!isAdmin && user?.OfficeId is null)
+{
+    <div class="alert alert-warning mt-4">
+        <i class="bi bi-exclamation-circle"></i> Nie zostałeś/aś jeszcze przypisany/a do biura. Skontaktuj się z administratorem.
+    </div>
+}
+else if (devices == null)
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
@@ -211,7 +229,7 @@ else
         </div>
 
         <div>
-            <AlertsHistoryPanel />
+            <AlertsHistoryPanel OfficeId="@scopedOfficeId" />
         </div>
     </div>
 }
@@ -221,6 +239,10 @@ else
     private HubConnection? hubConnection;
     private int? expandedDeviceId;
     private List<DeviceAlert> recentAlerts = new();
+
+    private CurrentUserInfo? user;
+    private bool isAdmin;
+    private int? scopedOfficeId;
 
     private void ToggleDetails(int id) => expandedDeviceId = (expandedDeviceId == id) ? null : id;
 
@@ -237,12 +259,16 @@ else
             "Print" => "bi-printer",
             "Smartphone" => "bi-phone",
             "Tablet" => "bi-tablet",
-            "Other" => "bi-three-dots",
+            _ => "bi-three-dots",
         };
     }
 
     protected override async Task OnInitializedAsync()
     {
+        user = await CurrentUser.GetAsync();
+        isAdmin = user?.IsAdmin == true;
+        scopedOfficeId = isAdmin ? null : user?.OfficeId;
+
         await LoadData();
         var apiBaseUrl = Config["services:apiservice:http:0"] ?? Config["services:apiservice:https:0"];
         if (!string.IsNullOrEmpty(apiBaseUrl))
@@ -260,8 +286,11 @@ else
 
             hubConnection.On<DeviceAlert>("AlertCreated", (alert) =>
             {
-                AlertService.AddNotification(alert);
-                InvokeAsync(StateHasChanged);
+                if (isAdmin || alert.Device?.OfficeId == user?.OfficeId)
+                {
+                    AlertService.AddNotification(alert);
+                    InvokeAsync(StateHasChanged);
+                }
             });
 
             await hubConnection.StartAsync();
@@ -270,20 +299,33 @@ else
 
     private async Task LoadData()
     {
-        try 
-        { 
-            devices = await ApiClient.GetDevicesAsync();
-            recentAlerts = await ApiClient.GetAlertsAsync(limit: 5);
+        try
+        {
+            if (isAdmin)
+            {
+                devices = await ApiClient.GetDevicesAsync();
+                recentAlerts = await AlertClient.GetAlertsAsync(limit: 5);
+            }
+            else if (user?.OfficeId is int officeId)
+            {
+                devices = await ApiClient.GetDevicesByOfficeAsync(officeId);
+                recentAlerts = await AlertClient.GetAlertsAsync(officeId: officeId, limit: 5);
+            }
+            else
+            {
+                devices = [];
+                recentAlerts = [];
+            }
         }
-        catch (Exception ex) 
-        { 
-            Console.WriteLine($"ERROR: {ex.Message}"); 
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
         }
     }
 
-    public async ValueTask DisposeAsync() 
-    { 
-        if (hubConnection is not null) 
-            await hubConnection.DisposeAsync(); 
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
     }
 }

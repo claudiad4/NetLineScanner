@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NetLine.Domain.Entities;
 using NetLine.Infrastructure.Data;
 
@@ -32,6 +32,19 @@ public static class OfficeEndpoints
             return Results.Created($"/api/offices/{office.Id}", office);
         })
         .WithName("CreateOffice");
+
+        group.MapPut("/{id}", async (int id, Office updated, AppDbContext db) =>
+        {
+            var office = await db.Offices.FindAsync(id);
+            if (office is null)
+                return Results.NotFound();
+
+            office.Name = updated.Name;
+            office.Location = updated.Location;
+            await db.SaveChangesAsync();
+            return Results.Ok(office);
+        })
+        .WithName("UpdateOffice");
 
         group.MapDelete("/{id}", async (int id, AppDbContext db) =>
         {

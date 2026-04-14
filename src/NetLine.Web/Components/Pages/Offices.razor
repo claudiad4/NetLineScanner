@@ -1,8 +1,10 @@
-﻿@page "/offices"
+@page "/offices"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using NetLine.Web.Services
 @using NetLine.Domain.Entities
 @rendermode InteractiveServer
 @inject OfficeApiClient ApiClient
+@inject CurrentUserService CurrentUser
 @inject NavigationManager Nav
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -38,15 +40,18 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-building text-purple"></i> Biura</h1>
-    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="() => showForm = !showForm">
-        <i class="bi bi-plus-lg"></i> Dodaj biuro
-    </button>
+    @if (isAdmin)
+    {
+        <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="ToggleAddForm">
+            <i class="bi bi-plus-lg"></i> Dodaj biuro
+        </button>
+    }
 </div>
 
-@if (showForm)
+@if (isAdmin && showForm)
 {
     <div class="card p-4 mb-4 shadow-sm" style="max-width: 500px;">
-        <h5 class="mb-3">Nowe biuro</h5>
+        <h5 class="mb-3">@(editingOfficeId is null ? "Nowe biuro" : "Edytuj biuro")</h5>
         <div class="mb-3">
             <label class="form-label fw-bold">Nazwa biura</label>
             <input @bind="newName" class="form-control" placeholder="np. Biuro Warszawa" />
@@ -56,18 +61,18 @@
             <input @bind="newLocation" class="form-control" placeholder="np. ul. Marszałkowska 1" />
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="AddOffice" disabled="@isLoading">
+            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="SaveOffice" disabled="@isLoading">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm"></span>
-                    <span> Dodawanie...</span>
+                    <span> Zapisywanie...</span>
                 }
                 else
                 {
-                    <span>Dodaj</span>
+                    <span>@(editingOfficeId is null ? "Dodaj" : "Zapisz")</span>
                 }
             </button>
-            <button class="btn btn-outline-secondary w-100" @onclick="() => showForm = false">Anuluj</button>
+            <button class="btn btn-outline-secondary w-100" @onclick="CancelForm">Anuluj</button>
         </div>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -76,7 +81,13 @@
     </div>
 }
 
-@if (offices == null)
+@if (!isAdmin && user?.OfficeId is null)
+{
+    <div class="alert alert-warning mt-4">
+        <i class="bi bi-exclamation-circle"></i> Nie zostałeś/aś jeszcze przypisany/a do żadnego biura. Skontaktuj się z administratorem.
+    </div>
+}
+else if (offices == null)
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
@@ -87,7 +98,7 @@ else if (offices.Count == 0)
 {
     <div class="text-center mt-5 text-muted">
         <i class="bi bi-building" style="font-size: 3rem;"></i>
-        <p class="mt-2">Brak biur. Dodaj pierwsze biuro.</p>
+        <p class="mt-2">Brak biur. @(isAdmin ? "Dodaj pierwsze biuro." : "Brak przypisanego biura.")</p>
     </div>
 }
 else
@@ -110,9 +121,17 @@ else
                     </div>
                     <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
                         <small class="text-muted">Dodano: @office.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</small>
-                        <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" @onclick="() => DeleteOffice(office.Id)">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        @if (isAdmin)
+                        {
+                            <div class="d-flex gap-1" @onclick:stopPropagation="true">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditOffice(office)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteOffice(office.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -122,19 +141,79 @@ else
 
 @code {
     private List<Office>? offices;
+    private CurrentUserInfo? user;
+    private bool isAdmin;
+
     private string newName = "";
     private string? newLocation;
+    private int? editingOfficeId;
     private bool isLoading = false;
     private bool showForm = false;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        offices = await ApiClient.GetOfficesAsync();
+        user = await CurrentUser.GetAsync();
+        isAdmin = user?.IsAdmin == true;
+
+        await LoadOffices();
     }
 
-    private async Task AddOffice()
+    private async Task LoadOffices()
     {
+        var all = await ApiClient.GetOfficesAsync();
+        if (isAdmin)
+        {
+            offices = all;
+        }
+        else if (user?.OfficeId is int officeId)
+        {
+            offices = all.Where(o => o.Id == officeId).ToList();
+        }
+        else
+        {
+            offices = [];
+        }
+    }
+
+    private void ToggleAddForm()
+    {
+        if (showForm)
+        {
+            CancelForm();
+        }
+        else
+        {
+            editingOfficeId = null;
+            newName = "";
+            newLocation = null;
+            errorMessage = null;
+            showForm = true;
+        }
+    }
+
+    private void EditOffice(Office office)
+    {
+        editingOfficeId = office.Id;
+        newName = office.Name;
+        newLocation = office.Location;
+        errorMessage = null;
+        showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        editingOfficeId = null;
+        newName = "";
+        newLocation = null;
+        errorMessage = null;
+    }
+
+    private async Task SaveOffice()
+    {
+        if (!isAdmin) return;
+
         if (string.IsNullOrWhiteSpace(newName))
         {
             errorMessage = "Nazwa biura jest wymagana.";
@@ -144,18 +223,25 @@ else
         isLoading = true;
         errorMessage = null;
 
-        var (success, error) = await ApiClient.AddOfficeAsync(newName, newLocation);
-
-        if (success)
+        bool success;
+        string? error;
+        if (editingOfficeId is null)
         {
-            newName = "";
-            newLocation = null;
-            showForm = false;
-            offices = await ApiClient.GetOfficesAsync();
+            (success, error) = await ApiClient.AddOfficeAsync(newName, newLocation);
         }
         else
         {
-            errorMessage = error ?? "Nie udało się dodać biura.";
+            (success, error) = await ApiClient.UpdateOfficeAsync(editingOfficeId.Value, newName, newLocation);
+        }
+
+        if (success)
+        {
+            CancelForm();
+            await LoadOffices();
+        }
+        else
+        {
+            errorMessage = error ?? "Nie udało się zapisać biura.";
         }
 
         isLoading = false;
@@ -163,7 +249,8 @@ else
 
     private async Task DeleteOffice(int id)
     {
+        if (!isAdmin) return;
         await ApiClient.DeleteOfficeAsync(id);
-        offices = await ApiClient.GetOfficesAsync();
+        await LoadOffices();
     }
 }
