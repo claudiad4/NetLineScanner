@@ -39,8 +39,11 @@ public static class IdentitySeeder
             var result = await userManager.CreateAsync(admin, DefaultAdminPassword);
             if (!result.Succeeded)
             {
+                var errors = string.Join(", ", result.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                Console.WriteLine($"Error creating admin user: {errors}");
                 return;
             }
+            Console.WriteLine("Admin user created successfully");
         }
 
         if (!await userManager.IsInRoleAsync(admin, AdminRole))
