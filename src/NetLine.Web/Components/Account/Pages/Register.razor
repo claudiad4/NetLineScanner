@@ -14,6 +14,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject RoleManager<IdentityRole> RoleManager
 
 <PageTitle>Register</PageTitle>
 
@@ -51,6 +52,17 @@
                 <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="confirm-password">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Role</label>
+                <div class="form-check">
+                    <InputRadio class="form-check-input" Value="Admin" @bind-Value="Input.Role" id="role-admin" />
+                    <label class="form-check-label" for="role-admin">Admin</label>
+                </div>
+                <div class="form-check">
+                    <InputRadio class="form-check-input" Value="User" @bind-Value="Input.Role" id="role-user" />
+                    <label class="form-check-label" for="role-user">User</label>
+                </div>
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </EditForm>
@@ -98,6 +110,13 @@
         }
 
         Logger.LogInformation("User created a new account with password.");
+
+        // Assign role to user
+        var roleToAssign = Input.Role ?? "User";
+        if (await RoleManager.RoleExistsAsync(roleToAssign))
+        {
+            await UserManager.AddToRoleAsync(user, roleToAssign);
+        }
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -166,5 +185,9 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Role")]
+        public string Role { get; set; } = "User";
     }
 }
