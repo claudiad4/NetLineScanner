@@ -13,6 +13,10 @@ builder.AddServiceDefaults();
 
 builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
+// Register IDbContextFactory for scaffolded components
+builder.Services.AddScoped<IDbContextFactory<AppDbContext>>(provider =>
+    new AppDbContextFactory(provider.GetRequiredService<DbContextOptions<AppDbContext>>()));
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
