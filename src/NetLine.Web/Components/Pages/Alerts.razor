@@ -1,15 +1,17 @@
 @page "/alerts"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using NetLine.Web.Services
 @using NetLine.Domain.Entities
 @using Microsoft.AspNetCore.SignalR.Client
 @rendermode InteractiveServer
 @inject AlertApiClient ApiClient
+@inject CurrentUserService CurrentUser
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-<PageTitle>Alerty Urz¹dzeñ</PageTitle>
+<PageTitle>Alerty Urzï¿½dzeï¿½</PageTitle>
 
 <style>
     .text-purple { color: #6f42c1 !important; }
@@ -50,7 +52,7 @@
 @if (errorMessage != null)
 {
     <div class="error-banner">
-        <i class="bi bi-exclamation-triangle-fill"></i> <strong>B³¹d:</strong> @errorMessage
+        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Bï¿½ï¿½d:</strong> @errorMessage
         <button class="btn btn-sm btn-outline-danger ms-2" @onclick="ClearError">
             <i class="bi bi-x"></i>
         </button>
@@ -61,7 +63,7 @@
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
-        <p class="mt-2 text-muted">£adowanie alertów...</p>
+        <p class="mt-2 text-muted">ï¿½adowanie alertï¿½w...</p>
     </div>
 }
 else
@@ -153,7 +155,7 @@ else
                         </div>
                         <hr />
                         <button class="btn btn-sm btn-outline-danger w-100" @onclick="ClearAllAlerts" disabled="@(isLoading || !alerts.Any())">
-                            <i class="bi bi-trash"></i> Wyczyœæ wszystkie
+                            <i class="bi bi-trash"></i> Wyczyï¿½ï¿½ wszystkie
                         </button>
                     </div>
                 </div>
@@ -166,8 +168,8 @@ else
             <div class="empty-state-icon">
                 <i class="bi @(selectedFilter == null ? "bi-inbox" : "bi-check-circle")"></i>
             </div>
-            <h5 class="text-muted">@(selectedFilter == null ? "Brak alertów" : "Brak alertów w tym filtrze")</h5>
-            @if(selectedFilter == null) { <p class="text-muted small">Wszystkie urz¹dzenia dzia³aj¹ prawid³owo</p> }
+            <h5 class="text-muted">@(selectedFilter == null ? "Brak alertï¿½w" : "Brak alertï¿½w w tym filtrze")</h5>
+            @if(selectedFilter == null) { <p class="text-muted small">Wszystkie urzï¿½dzenia dziaï¿½ajï¿½ prawidï¿½owo</p> }
         </div>
     }
 }
@@ -178,6 +180,9 @@ else
     private AlertType? selectedFilter;
     private string? errorMessage;
     private bool isLoading;
+    private CurrentUserInfo? user;
+    private bool isAdmin;
+    private int? scopedOfficeId;
 
     private IEnumerable<DeviceAlert> filteredAlerts => 
         selectedFilter == null 
@@ -198,6 +203,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        user = await CurrentUser.GetAsync();
+        isAdmin = user?.IsAdmin == true;
+        scopedOfficeId = isAdmin ? null : user?.OfficeId;
+
         await LoadAlerts();
         await InitializeSignalR();
     }
@@ -235,7 +244,7 @@ else
                 if (error != null)
                 {
                     Console.WriteLine($"SignalR connection closed with error: {error.Message}");
-                    errorMessage = "Utracona po³¹czenie z serwerem. Próba ponownego po³¹czenia...";
+                    errorMessage = "Utracona poï¿½ï¿½czenie z serwerem. Prï¿½ba ponownego poï¿½ï¿½czenia...";
                     await InvokeAsync(StateHasChanged);
                 }
                 await Task.Delay(5000);
@@ -255,7 +264,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"SignalR initialization error: {ex.Message}");
-            errorMessage = $"Nie mo¿na po³¹czyæ siê z serwerem czasu rzeczywistego: {ex.Message}";
+            errorMessage = $"Nie moï¿½na poï¿½ï¿½czyï¿½ siï¿½ z serwerem czasu rzeczywistego: {ex.Message}";
         }
     }
 
@@ -264,20 +273,27 @@ else
         try
         {
             isLoading = true;
-            alerts = await ApiClient.GetAlertsAsync();
+            if (!isAdmin && scopedOfficeId is null)
+            {
+                alerts = [];
+                errorMessage = null;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+            alerts = await ApiClient.GetAlertsAsync(officeId: scopedOfficeId);
             errorMessage = null;
             await InvokeAsync(StateHasChanged);
         }
         catch (HttpRequestException ex)
         {
-            errorMessage = $"B³¹d po³¹czenia: {ex.Message}";
+            errorMessage = $"Bï¿½ï¿½d poï¿½ï¿½czenia: {ex.Message}";
             Console.WriteLine($"HTTP error loading alerts: {ex}");
             alerts = [];
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            errorMessage = $"B³¹d ³adowania alertów: {ex.Message}";
+            errorMessage = $"Bï¿½ï¿½d ï¿½adowania alertï¿½w: {ex.Message}";
             Console.WriteLine($"Error loading alerts: {ex}");
             alerts = [];
             await InvokeAsync(StateHasChanged);
@@ -300,12 +316,12 @@ else
             }
             else
             {
-                errorMessage = "Nie uda³o siê oznaczyæ alertu jako przeczytany";
+                errorMessage = "Nie udaï¿½o siï¿½ oznaczyï¿½ alertu jako przeczytany";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"B³¹d przy oznaczaniu alertu: {ex.Message}";
+            errorMessage = $"Bï¿½ï¿½d przy oznaczaniu alertu: {ex.Message}";
             Console.WriteLine($"Error marking alert as read: {ex}");
         }
         finally
@@ -319,19 +335,19 @@ else
         try
         {
             isLoading = true;
-            var success = await ApiClient.MarkAllAlertsAsReadAsync();
+            var success = await ApiClient.MarkAllAlertsAsReadAsync(scopedOfficeId);
             if (success)
             {
                 await LoadAlerts();
             }
             else
             {
-                errorMessage = "Nie uda³o siê oznaczyæ wszystkich alertów jako przeczytane";
+                errorMessage = "Nie udaï¿½o siï¿½ oznaczyï¿½ wszystkich alertï¿½w jako przeczytane";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"B³¹d przy oznaczaniu alertów: {ex.Message}";
+            errorMessage = $"Bï¿½ï¿½d przy oznaczaniu alertï¿½w: {ex.Message}";
             Console.WriteLine($"Error marking all alerts as read: {ex}");
         }
         finally
@@ -345,19 +361,19 @@ else
         try
         {
             isLoading = true;
-            var success = await ApiClient.ClearAllAlertsAsync();
+            var success = await ApiClient.ClearAllAlertsAsync(scopedOfficeId);
             if (success)
             {
                 await LoadAlerts();
             }
             else
             {
-                errorMessage = "Nie uda³o siê wyczyœciæ alertów";
+                errorMessage = "Nie udaï¿½o siï¿½ wyczyï¿½ciï¿½ alertï¿½w";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"B³¹d przy czyszczeniu alertów: {ex.Message}";
+            errorMessage = $"Bï¿½ï¿½d przy czyszczeniu alertï¿½w: {ex.Message}";
             Console.WriteLine($"Error clearing alerts: {ex}");
         }
         finally

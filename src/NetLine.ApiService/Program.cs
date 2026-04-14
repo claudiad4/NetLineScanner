@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NetLine.Infrastructure.Data;
@@ -13,6 +13,7 @@ using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
 using NetLine.Infrastructure.Services.Monitoring;
 using NetLine.Infrastructure;
+using NetLine.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -20,7 +21,7 @@ builder.AddServiceDefaults();
 // Add DbContext with PostgreSQL
 builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
-// Add Identity services
+// Add Identity services with roles
 builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 {
     options.Password.RequiredLength = 8;
@@ -28,6 +29,7 @@ builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
     options.Password.RequireUppercase = true;
     options.SignIn.RequireConfirmedEmail = false;
 })
+.AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
@@ -56,12 +58,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply migrations
+// Apply migrations and seed roles/admin
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await context.Database.MigrateAsync();
 }
+await IdentitySeeder.SeedAsync(app.Services);
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
@@ -92,6 +95,7 @@ app.MapGet("/", () => "NetLine API - Monitoring system is ready.");
 app.MapDeviceEndpoints();
 app.MapOfficeEndpoints();
 app.MapUserEndpoints();
+app.MapAlertEndpoints();
 
 // Map Identity endpoints
 app.MapIdentityApi<AppUser>();

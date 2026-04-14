@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+@implements IDisposable
 @inject NavigationManager NavigationManager
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -16,16 +16,67 @@
                 <i class="bi bi-house-door-fill me-3" aria-hidden="true"></i> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="offices">
-                <i class="bi bi-building me-3" aria-hidden="true"></i> Biura
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="devices">
-                <i class="bi bi-eye-fill me-3" aria-hidden="true"></i> Monitor urządzeń
-            </NavLink>
-        </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="offices">
+                        <i class="bi bi-building me-3" aria-hidden="true"></i> Biura
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="devices">
+                        <i class="bi bi-eye-fill me-3" aria-hidden="true"></i> Monitor urządzeń
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="alerts">
+                        <i class="bi bi-bell me-3" aria-hidden="true"></i> Alerty
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="users">
+                        <i class="bi bi-people me-3" aria-hidden="true"></i> Użytkownicy
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3 mt-3">
+                    <NavLink class="nav-link" href="Account/Manage">
+                        <i class="bi bi-person-circle me-3" aria-hidden="true"></i> @context.User.Identity?.Name
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link" style="background: none; border: 0; text-align: left; width: 100%;">
+                            <i class="bi bi-box-arrow-right me-3" aria-hidden="true"></i> Wyloguj
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3 mt-3">
+                    <NavLink class="nav-link" href="Account/Login">
+                        <i class="bi bi-box-arrow-in-right me-3" aria-hidden="true"></i> Zaloguj
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Register">
+                        <i class="bi bi-person-plus me-3" aria-hidden="true"></i> Rejestracja
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 

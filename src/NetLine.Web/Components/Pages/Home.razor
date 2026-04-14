@@ -1,13 +1,31 @@
-﻿@page "/"
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 
 <PageTitle>Home</PageTitle>
 
 <h1>Welcome to NetLine!</h1>
-        
+
+<AuthorizeView>
+    <Authorized>
+        <p>Zalogowano jako: <strong>@context.User.Identity?.Name</strong></p>
+        <AuthorizeView Roles="Admin" Context="adminContext">
+            <Authorized>
+                <p>Rola: <span class="badge bg-danger">Admin</span> — masz pełny dostęp do wszystkich biur, urządzeń i użytkowników.</p>
+            </Authorized>
+            <NotAuthorized>
+                <p>Rola: <span class="badge bg-secondary">User</span> — masz dostęp tylko do swojego biura (tylko do odczytu).</p>
+            </NotAuthorized>
+        </AuthorizeView>
+    </Authorized>
+    <NotAuthorized>
+        <p>
+            <a class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" href="Account/Login">Zaloguj się</a>
+        </p>
+    </NotAuthorized>
+</AuthorizeView>
+
 <p><strong>NOTE:</strong> This is just a placeholder page. The content will be added in the future. </p>
 <p>This is an application for devices monitoring.</p>
 <p>Created in WSB Merito.</p>
 
 <img src="Images/Logo long.png" alt="Logo" style="height: 10rem; margin-right: 0.5rem;" />
-
-

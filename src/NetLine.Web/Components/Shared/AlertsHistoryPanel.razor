@@ -2,7 +2,7 @@
 @using NetLine.Domain.Entities
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
-@inject DeviceApiClient ApiClient
+@inject AlertApiClient AlertClient
 @inject IConfiguration Config
 
 <div class="alerts-panel">
@@ -132,6 +132,8 @@
 </style>
 
 @code {
+    [Parameter] public int? OfficeId { get; set; }
+
     private List<DeviceAlert> alerts = new();
     private HubConnection? hubConnection;
     private bool isLoading = true;
@@ -148,7 +150,7 @@
         try
         {
             isLoading = true;
-            alerts = await ApiClient.GetAlertsAsync(limit: 20);
+            alerts = await AlertClient.GetAlertsAsync(officeId: OfficeId, limit: 20);
             unreadCount = alerts.Count(a => !a.IsRead);
         }
         catch (Exception ex)
