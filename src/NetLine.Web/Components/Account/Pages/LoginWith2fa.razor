@@ -2,10 +2,10 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
-@using NetLine.Infrastructure.Data
+@using NetLine.Infrastructure
 
-@inject SignInManager<IdentityUser> SignInManager
-@inject UserManager<IdentityUser> UserManager
+@inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWith2fa> Logger
 
@@ -46,7 +46,7 @@
 
 @code {
     private string? message;
-    private IdentityUser user = default!;
+    private AppUser user = default!;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
