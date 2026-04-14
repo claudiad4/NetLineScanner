@@ -110,7 +110,8 @@ else
                     </div>
                     <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
                         <small class="text-muted">Dodano: @office.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</small>
-                        <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" @onclick="() => DeleteOffice(office.Id)">
+                        <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" @onclick="() => DeleteOffice(office.Id)"
+                            onclick="return confirm('Czy na pewno chcesz usunąć to biuro?');">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -163,7 +164,12 @@ else
 
     private async Task DeleteOffice(int id)
     {
-        await ApiClient.DeleteOfficeAsync(id);
+        if (!await ApiClient.DeleteOfficeAsync(id))
+        {
+            errorMessage = "Nie udało się usunąć biura.";
+            return;
+        }
         offices = await ApiClient.GetOfficesAsync();
+        errorMessage = null;
     }
 }
