@@ -9,9 +9,9 @@ using NetLine.Infrastructure.Data;
 using NetLine.Web.Components.Account;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = builder.Configuration.GetConnectionString("AppDbContextConnection") ?? throw new InvalidOperationException("Connection string 'AppDbContextConnection' not found.");
+builder.AddServiceDefaults();
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

@@ -18,6 +18,8 @@ builder.AddProject<Projects.NetLine_Web>("webfrontend")
     .WithHttpHealthCheck("/health")
     .WithReference(cache)
     .WaitFor(cache)
+    .WithReference(deviceDb)
+    .WaitFor(deviceDb)
     .WithReference(apiService)
     .WaitFor(apiService);
 
