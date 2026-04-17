@@ -36,7 +36,7 @@ public sealed class SnmpClient
                 variables,
                 DefaultTimeoutMs), cancellationToken);
 
-            return result;
+            return result.ToList();
         }
         catch (Lextm.SharpSnmpLib.Messaging.TimeoutException)
         {
