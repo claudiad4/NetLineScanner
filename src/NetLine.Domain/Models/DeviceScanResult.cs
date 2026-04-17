@@ -1,11 +1,17 @@
 namespace NetLine.Domain.Models;
 
 /// <summary>
-/// Represents the scan result for a single device.
-/// Contains both ping and SNMP data collected during a monitoring cycle.
+/// Aggregate scan outcome for one device collected in a monitoring cycle.
+/// Holds legacy ping/SNMP fields for API back-compat plus a list of
+/// per-component results produced by <see cref="NetLine.Application.Interfaces.Monitoring.IMonitoringComponent"/>.
 /// </summary>
-public record DeviceScanResult(
+public sealed record DeviceScanResult(
     int DeviceId,
     string IpAddress,
     long? PingResponseTimeMs,
-    SNMPScanResult SnmpData);
+    SNMPScanResult SnmpData,
+    IReadOnlyList<ComponentResult> ComponentResults)
+{
+    public DeviceScanResult(int deviceId, string ipAddress, long? pingResponseTimeMs, SNMPScanResult snmpData)
+        : this(deviceId, ipAddress, pingResponseTimeMs, snmpData, Array.Empty<ComponentResult>()) { }
+}

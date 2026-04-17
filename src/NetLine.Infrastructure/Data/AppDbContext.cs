@@ -12,6 +12,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<DeviceInfo> DevicesInfo => Set<DeviceInfo>();
     public DbSet<DeviceAlert> DeviceAlerts { get; set; }
     public DbSet<Office> Offices { get; set; }
+    public DbSet<DeviceMetric> DeviceMetrics => Set<DeviceMetric>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,5 +33,16 @@ public class AppDbContext : IdentityDbContext<AppUser>
             .WithMany(o => o.Devices)
             .HasForeignKey(d => d.OfficeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DeviceMetric>(b =>
+        {
+            b.HasOne(m => m.Device)
+                .WithMany()
+                .HasForeignKey(m => m.DeviceInfoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(m => new { m.DeviceInfoId, m.Timestamp });
+            b.HasIndex(m => new { m.DeviceInfoId, m.MetricKey, m.Timestamp });
+        });
     }
 }

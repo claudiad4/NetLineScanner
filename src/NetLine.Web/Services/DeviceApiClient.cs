@@ -52,6 +52,9 @@ public class DeviceApiClient(HttpClient httpClient)
     public async Task<bool> DeleteDeviceAsync(int id)
     => (await httpClient.DeleteAsync($"api/devices/{id}")).IsSuccessStatusCode;
 
+    public async Task<List<DeviceMetric>> GetLatestMetricsAsync(int id)
+        => await httpClient.GetFromJsonAsync<List<DeviceMetric>>($"api/devices/{id}/metrics/latest") ?? [];
+
     public async Task<bool> UpdateDeviceAsync(int id, string userDefinedName, string deviceType)
     {
         var response = await httpClient.PutAsJsonAsync($"api/devices/{id}", new

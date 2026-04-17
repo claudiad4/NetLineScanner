@@ -105,6 +105,44 @@ else
         </div>
 
         <div class="row mb-4">
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header fw-bold text-purple bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-speedometer2"></i> Metryki (najnowsze)</span>
+                        <small class="text-muted">@metrics.Count pozycji</small>
+                    </div>
+                    <div class="card-body">
+                        @if (metrics.Count == 0)
+                        {
+                            <p class="text-muted mb-0">Brak zebranych metryk. Poczekaj na nastepny cykl skanu.</p>
+                        }
+                        else
+                        {
+                            @foreach (var group in metrics.GroupBy(m => m.Category).OrderBy(g => g.Key.ToString()))
+                            {
+                                <h6 class="text-purple mt-3">@group.Key</h6>
+                                <table class="table table-sm">
+                                    <tbody>
+                                        @foreach (var m in group.OrderBy(x => x.MetricKey))
+                                        {
+                                            <tr>
+                                                <td class="text-muted" style="width: 30%;"><code>@m.MetricKey</code></td>
+                                                <td style="width: 25%;">@(m.Label ?? "")</td>
+                                                <td>
+                                                    @(m.NumericValue.HasValue
+                                                        ? $"{m.NumericValue.Value:0.##} {m.Unit}"
+                                                        : m.TextValue)
+                                                </td>
+                                                <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
             <div class="col-md-6 mb-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-header fw-bold text-purple bg-white">
@@ -168,6 +206,7 @@ else
 
     private DeviceInfo? device;
     private List<DeviceAlert> alerts = [];
+    private List<DeviceMetric> metrics = [];
     private CurrentUserInfo? user;
     private bool isAdmin;
     private bool accessDenied;
@@ -194,6 +233,7 @@ else
             }
 
             alerts = await AlertClient.GetAlertsAsync(deviceId: Id, limit: 50);
+            metrics = await ApiClient.GetLatestMetricsAsync(Id);
         }
         catch (Exception ex)
         {
@@ -236,6 +276,11 @@ else
         AlertType.WentOffline => "bi-x-circle-fill",
         AlertType.CameOnline => "bi-check-circle-fill",
         AlertType.HighLatency => "bi-exclamation-circle-fill",
+        AlertType.HighPacketLoss => "bi-reception-0",
+        AlertType.HighCpuUsage => "bi-cpu-fill",
+        AlertType.HighMemoryUsage => "bi-memory",
+        AlertType.InterfaceDown => "bi-ethernet",
+        AlertType.ComponentFailure => "bi-tools",
         _ => "bi-info-circle-fill"
     };
 
@@ -244,6 +289,11 @@ else
         AlertType.WentOffline => "text-danger",
         AlertType.CameOnline => "text-success",
         AlertType.HighLatency => "text-warning",
+        AlertType.HighPacketLoss => "text-warning",
+        AlertType.HighCpuUsage => "text-danger",
+        AlertType.HighMemoryUsage => "text-danger",
+        AlertType.InterfaceDown => "text-warning",
+        AlertType.ComponentFailure => "text-secondary",
         _ => "text-info"
     };
 }

@@ -34,6 +34,17 @@ public static class DeviceEndpoints
         })
         .WithName("GetDevice");
 
+        group.MapGet("/{id}/metrics/latest", async (int id, AppDbContext db) =>
+        {
+            var latest = await db.DeviceMetrics
+                .Where(m => m.DeviceInfoId == id)
+                .GroupBy(m => m.MetricKey)
+                .Select(g => g.OrderByDescending(x => x.Timestamp).First())
+                .ToListAsync();
+            return Results.Ok(latest);
+        })
+        .WithName("GetDeviceLatestMetrics");
+
         group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
         {
             var device = await svc.AddAsync(request);
