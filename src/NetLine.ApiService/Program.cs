@@ -12,6 +12,8 @@ using NetLine.Application.Interfaces.Devices;
 using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
 using NetLine.Infrastructure.Services.Monitoring;
+using NetLine.Infrastructure.Services.Monitoring.Components;
+using NetLine.Infrastructure.Services.Monitoring.Snmp;
 using NetLine.Infrastructure;
 using NetLine.Infrastructure.Identity;
 
@@ -36,6 +38,17 @@ builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 // Add application services
 builder.Services.AddSingleton<ISNMPService, SnmpService>();
 builder.Services.AddSingleton<IICMPService, ICMPService>();
+builder.Services.AddSingleton<SnmpClient>();
+
+// Monitoring components — ordered to match the user-facing taxonomy
+builder.Services.AddSingleton<IMonitoringComponent, SystemComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, CpuComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, MemoryComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, NetworkInterfaceComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, PingComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, PortScanComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, DnsComponent>();
+
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
 builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();
