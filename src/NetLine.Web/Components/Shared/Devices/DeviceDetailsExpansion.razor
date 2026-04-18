@@ -1,0 +1,35 @@
+@using NetLine.Domain.Entities
+
+<div class="details-container">
+    <div class="row">
+        <div class="col-md-4 border-end">
+            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-info-square"></i> System</h6>
+            <p class="mb-1 small"><strong>Name (SNMP):</strong> @(Device.SysName ?? "No data")</p>
+            <p class="mb-1 small"><strong>Localisation of device:</strong> @(Device.SysLocation ?? "No data")</p>
+            <p class="mb-1 small"><strong>Person responsible for device:</strong> @(Device.SysContact ?? "No data")</p>
+        </div>
+        <div class="col-md-4 border-end">
+            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-activity"></i> Status</h6>
+            <p class="mb-1 small"><strong>UpTime:</strong> @(Device.SysUpTime ?? "No data")</p>
+            <p class="mb-1 small"><strong>Interfaces:</strong> @(Device.SysInterfacesCount?.ToString() ?? "---")</p>
+            <p class="mb-1 small"><strong>Last PING:</strong> @(Device.PingResponseTimeMs?.ToString() ?? "---") ms</p>
+        </div>
+        <div class="col-md-4">
+            <h6 class="fw-bold text-purple border-bottom pb-1"><i class="bi bi-file-earmark-text"></i> Other info</h6>
+            <small class="text-muted" style="font-size: 0.75rem;">
+                @if (string.IsNullOrEmpty(Device.SysUpTime) || Device.SysUpTime == "No data")
+                {
+                    <span>@(Device.PingResponseTimeMs.HasValue ? "Ping OK, SNMP not working." : "Device is unreachable.")</span>
+                }
+                else
+                {
+                    @(Device.SysDescr ?? "SNMP Data.")
+                }
+            </small>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DeviceInfo Device { get; set; } = default!;
+}

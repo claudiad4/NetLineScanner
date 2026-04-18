@@ -47,6 +47,7 @@ builder.Services.AddHttpClient<UserApiClient>(client =>
 
 builder.Services.AddSingleton<AlertNotificationService>();
 builder.Services.AddScoped<CurrentUserService>();
+builder.Services.AddScoped<DeviceHubClient>();
 
 builder.Services.AddCascadingAuthenticationState();
 
