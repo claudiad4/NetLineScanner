@@ -6,19 +6,13 @@ using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components;
-
-/// <summary>
-/// Walks IF-MIB (.1.3.6.1.2.1.2.2.1) to emit per-interface status and throughput.
-/// Throughput is computed from the delta of ifInOctets/ifOutOctets between cycles,
-/// cached per device in-process.
 /// </summary>
 public sealed class NetworkInterfaceComponent : IMonitoringComponent
 {
-    private readonly SnmpClient _snmp;
+    private readonly ISnmpClient _snmp;
     private readonly ILogger<NetworkInterfaceComponent> _logger;
     private static readonly ConcurrentDictionary<int, OctetSnapshot> _lastSnapshot = new();
-
-    public NetworkInterfaceComponent(SnmpClient snmp, ILogger<NetworkInterfaceComponent> logger)
+    public NetworkInterfaceComponent(ISnmpClient snmp, ILogger<NetworkInterfaceComponent> logger)
     {
         _snmp = snmp;
         _logger = logger;

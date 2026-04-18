@@ -4,12 +4,14 @@ using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Snmp;
+using NetLine.Application.Interfaces.Monitoring;
+
 
 /// <summary>
 /// Lightweight wrapper around SharpSnmpLib that exposes async Get/Walk primitives
 /// and uniform error handling for monitoring components.
 /// </summary>
-public sealed class SnmpClient
+public sealed class SnmpClient: ISnmpClient
 {
     private const int DefaultTimeoutMs = 2000;
     private const int DefaultPort = 161;

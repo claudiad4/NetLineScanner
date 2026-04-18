@@ -38,7 +38,7 @@ builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 // Add application services
 builder.Services.AddSingleton<ISNMPService, SnmpService>();
 builder.Services.AddSingleton<IICMPService, ICMPService>();
-builder.Services.AddSingleton<SnmpClient>();
+builder.Services.AddSingleton<ISnmpClient, SnmpClient>();
 
 // Monitoring components — ordered to match the user-facing taxonomy
 builder.Services.AddSingleton<IMonitoringComponent, SystemComponent>();

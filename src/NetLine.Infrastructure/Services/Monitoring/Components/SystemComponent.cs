@@ -5,17 +5,12 @@ using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components;
-
-/// <summary>
-/// Collects the RFC 1213 System Group plus load averages, logged-in users
-/// and detects OS family from sysDescr.
 /// </summary>
 public sealed class SystemComponent : IMonitoringComponent
 {
-    private readonly SnmpClient _snmp;
+    private readonly ISnmpClient _snmp;
     private readonly ILogger<SystemComponent> _logger;
-
-    public SystemComponent(SnmpClient snmp, ILogger<SystemComponent> logger)
+    public SystemComponent(ISnmpClient snmp, ILogger<SystemComponent> logger)
     {
         _snmp = snmp;
         _logger = logger;

@@ -5,17 +5,12 @@ using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components;
-
-/// <summary>
-/// RAM usage — total / free / used in MB and percent. Uses UCD-SNMP-MIB when present,
-/// otherwise derives values from HOST-RESOURCES hrStorage entries of type RAM.
 /// </summary>
 public sealed class MemoryComponent : IMonitoringComponent
 {
-    private readonly SnmpClient _snmp;
+    private readonly ISnmpClient _snmp;
     private readonly ILogger<MemoryComponent> _logger;
-
-    public MemoryComponent(SnmpClient snmp, ILogger<MemoryComponent> logger)
+    public MemoryComponent(ISnmpClient snmp, ILogger<MemoryComponent> logger)
     {
         _snmp = snmp;
         _logger = logger;
