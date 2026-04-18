@@ -73,10 +73,10 @@ public partial class Devices : ComponentBase, IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         Hub.OnDeviceStatusUpdated -= HandleStatusUpdated;
         Hub.OnAlertCreated -= HandleAlertCreated;
-        await Hub.DisposeAsync();
+        return ValueTask.CompletedTask;
     }
 }

@@ -13,6 +13,7 @@ public sealed class DeviceHubClient : IAsyncDisposable
 {
     private readonly IConfiguration _config;
     private HubConnection? _connection;
+    private bool _disposed;
 
     public DeviceHubClient(IConfiguration config) => _config = config;
 
@@ -21,6 +22,7 @@ public sealed class DeviceHubClient : IAsyncDisposable
 
     public async Task StartAsync()
     {
+        if (_disposed) throw new ObjectDisposedException(nameof(DeviceHubClient));
         if (_connection is not null) return;
 
         var apiBaseUrl = _config["services:apiservice:http:0"]
@@ -47,6 +49,12 @@ public sealed class DeviceHubClient : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_connection is not null) await _connection.DisposeAsync();
+        if (_disposed) return;
+        _disposed = true;
+        if (_connection is not null)
+        {
+            await _connection.DisposeAsync();
+            _connection = null;
+        }
     }
 }
