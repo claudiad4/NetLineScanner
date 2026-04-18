@@ -1,5 +1,6 @@
 @using NetLine.Web.Services
 @using NetLine.Domain.Entities;
+@implements IDisposable
 @inject AlertNotificationService AlertService
 
 <div class="toast-container">
@@ -74,15 +75,28 @@
 </style>
 
 @code {
+    private bool _disposed;
+
     protected override void OnInitialized()
     {
-        AlertService.OnNotificationAdded += StateHasChanged;
-        AlertService.OnNotificationRemoved += StateHasChanged;
+        AlertService.OnNotificationAdded += OnNotificationChanged;
+        AlertService.OnNotificationRemoved += OnNotificationChanged;
+    }
+
+    private void OnNotificationChanged()
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
     {
-        AlertService.OnNotificationAdded -= StateHasChanged;
-        AlertService.OnNotificationRemoved -= StateHasChanged;
+        _disposed = true;
+        AlertService.OnNotificationAdded -= OnNotificationChanged;
+        AlertService.OnNotificationRemoved -= OnNotificationChanged;
     }
 }
