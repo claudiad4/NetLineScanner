@@ -1,0 +1,44 @@
+.alert-card {
+    border-left: 5px solid;
+    transition: all 0.3s ease;
+    margin-bottom: 12px;
+}
+
+.alert-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.alert-offline {
+    border-left-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.alert-online {
+    border-left-color: #28a745;
+    background-color: #f5fff5;
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    color: white;
+}
+
+.alert-offline .alert-icon {
+    background-color: #dc3545;
+}
+
+.alert-online .alert-icon {
+    background-color: #28a745;
+}
+
+.alert-time {
+    font-size: 0.85rem;
+    color: #6c757d;
+}

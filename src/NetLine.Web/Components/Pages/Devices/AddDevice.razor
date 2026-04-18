@@ -1,63 +1,22 @@
-﻿@page "/offices/{OfficeId:int}/add-device"
+@page "/offices/{OfficeId:int}/add-device"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using NetLine.Domain.Entities
-@using NetLine.Web.Services
 @rendermode InteractiveServer
-@inject DeviceApiClient ApiClient
-@inject OfficeApiClient OfficeClient
-@inject NavigationManager Nav
-<PageTitle>Dodaj Urządzenie</PageTitle>
-@* --- STYLE DLA TOASTA I VALIDACJI --- *@
-<style>
-    /* Styl powiadomienia (Toast) */
-    .custom-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background-color: #d1e7dd; /* Jasny zielony */
-        color: #0f5132; /* Ciemny zielony tekst */
-        border: 1px solid #badbcc;
-        padding: 15px 25px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1050;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        animation: slideIn 0.3s ease-out;
-    }
-    /* Animacja wjazdu toasta */
-    @@keyframes slideIn {
-        from {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
 
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    /* Inputy IP - usunięcie strzałek w Chrome/Edge */
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-</style>
-@* --- POWIADOMIENIE SUKCESU --- *@
+<PageTitle>Dodaj Urządzenie</PageTitle>
+
 @if (showSuccessToast)
 {
     <div class="custom-toast">
-        <i class="bi bi-check-circle-fill" style="font-size: 1.2rem;"></i>
+        <i class="bi bi-check-circle-fill toast-icon"></i>
         <div>
             <strong>Sukces!</strong><br />
             Urządzenie dodane pomyślnie.
         </div>
     </div>
 }
-<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh; padding: 20px;">
-    <div class="card p-4 shadow-sm" style="width: 100%; max-width: 500px;">
+
+<div class="d-flex justify-content-center align-items-center page-container">
+    <div class="card p-4 shadow-sm form-card">
         <h3 class="mb-2 text-center">Dodaj nowe urządzenie</h3>
         <p class="text-center text-muted mb-4">
             <i class="bi bi-building"></i>
@@ -67,18 +26,17 @@
                 <span class="text-muted"> · @office.Location</span>
             }
         </p>
-        @* --- SEKJA IP --- *@
+
         <div class="mb-3">
             <label class="form-label d-block fw-bold">Adres IP</label>
             <div class="d-flex align-items-center justify-content-between">
-                @* type="number" blokuje wpisywanie tekstu na mobile, a min/max pomaga w walidacji *@
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip1" placeholder="192" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1 ip-octet" @bind="ip1" placeholder="192" />
                 <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip2" placeholder="168" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1 ip-octet" @bind="ip2" placeholder="168" />
                 <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip3" placeholder="0" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1 ip-octet" @bind="ip3" placeholder="0" />
                 <span class="fw-bold">.</span>
-                <input type="number" min="0" max="255" class="form-control text-center px-1" @bind="ip4" placeholder="1" style="width: 70px;" />
+                <input type="number" min="0" max="255" class="form-control text-center px-1 ip-octet" @bind="ip4" placeholder="1" />
             </div>
             @if (isIpInvalid)
             {
@@ -87,12 +45,12 @@
                 </div>
             }
         </div>
-        @* --- NAZWA --- *@
+
         <div class="mb-3">
             <label class="form-label fw-bold">Nazwa własna</label>
             <input @bind="label" class="form-control" placeholder="np. Drukarka w salonie" />
         </div>
-        @* --- RODZAJ (LISTA) --- *@
+
         <div class="mb-4">
             <label class="form-label fw-bold">Rodzaj urządzenia</label>
             <select class="form-select" @bind="deviceType">
@@ -106,9 +64,9 @@
                 <option value="Other">Inne</option>
             </select>
         </div>
-        @* --- PRZYCISKI --- *@
+
         <div class="d-flex gap-2">
-            <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="Submit" disabled="@isLoading" style="background-color: #6f42c1; border-color: #6f42c1;">
+            <button class="btn btn-primary w-100 py-2 fw-bold submit-btn" @onclick="Submit" disabled="@isLoading">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm"></span>
@@ -123,81 +81,10 @@
                 Anuluj
             </button>
         </div>
-        @* --- KOMUNIKAT BŁĘDU (API) --- *@
+
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger mt-3">@errorMessage</div>
         }
     </div>
 </div>
-@code {
-    [Parameter] public int OfficeId { get; set; }
-    private Office? office;
-    protected override async Task OnInitializedAsync()
-    {
-        office = await OfficeClient.GetOfficeAsync(OfficeId);
-    }
-    // Zmieniamy typ na string, żeby łatwiej obsługiwać inputy, ale walidujemy jako liczby
-    private string ip1 = "";
-    private string ip2 = "";
-    private string ip3 = "";
-    private string ip4 = "";
-    private string label = "";
-    private string deviceType = "Computer";
-    private bool isLoading = false;
-    private bool showSuccessToast = false; // Sterowanie tostem
-    private bool isIpInvalid = false;      // Sterowanie błędem walidacji
-    private string? errorMessage;
-    private async Task Submit()
-    {
-        // 1. Reset stanów
-        isLoading = true;
-        errorMessage = null;
-        isIpInvalid = false;
-        // 2. Walidacja IP (Sprawdzamy czy to liczby 0-255)
-        if (!IsValidByte(ip1) || !IsValidByte(ip2) || !IsValidByte(ip3) || !IsValidByte(ip4))
-        {
-            isIpInvalid = true;
-            errorMessage = "Popraw błędy w adresie IP.";
-            isLoading = false;
-            return;
-        }
-        // 3. Złożenie adresu IP
-        string fullIp = $"{ip1}.{ip2}.{ip3}.{ip4}";
-        try
-        {
-            var (success, error) = await ApiClient.AddDeviceAsync(fullIp, label, deviceType, OfficeId);
-            if (success)
-            {
-                // 4. POKAŻ SUKCES
-                showSuccessToast = true;
-                isLoading = false;
-                StateHasChanged(); // Odśwież widok, żeby pokazać toast
-                // 5. Czekaj 2 sekundy i przekieruj z powrotem do biura
-                await Task.Delay(2000);
-                Nav.NavigateTo($"/offices/{OfficeId}");
-            }
-            else
-            {
-                errorMessage = error ?? "Serwer odrzucił zapis (sprawdź czy IP nie jest zajęte).";
-                isLoading = false;
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Błąd połączenia: " + ex.Message;
-            isLoading = false;
-        }
-    }
-    private void Cancel() => Nav.NavigateTo($"/offices/{OfficeId}");
-    // Metoda pomocnicza do sprawdzania liczb
-    private bool IsValidByte(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input)) return false;
-        if (int.TryParse(input, out int result))
-        {
-            return result >= 0 && result <= 255;
-        }
-        return false;
-    }
-}

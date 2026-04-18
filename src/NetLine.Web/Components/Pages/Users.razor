@@ -1,88 +1,25 @@
 @page "/users"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
-@using NetLine.Web.Services
-@using NetLine.Domain.Entities
 @rendermode InteractiveServer
-@inject UserApiClient UserClient
-@inject OfficeApiClient OfficeClient
-@inject CurrentUserService CurrentUser
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <PageTitle>Użytkownicy</PageTitle>
 
-<style>
-    .text-purple { color: #6f42c1 !important; }
-</style>
-
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-people text-purple"></i> Użytkownicy</h1>
-    <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="ToggleAddForm">
+    <button class="btn btn-primary header-btn-purple" @onclick="ToggleAddForm">
         <i class="bi bi-plus-lg"></i> Dodaj użytkownika
     </button>
 </div>
 
 @if (showForm)
 {
-    <div class="card p-4 mb-4 shadow-sm" style="max-width: 600px;">
-        <h5 class="mb-3">Nowy użytkownik</h5>
-        <div class="mb-3">
-            <label class="form-label fw-bold">E-mail</label>
-            <input type="email" @bind="newEmail" class="form-control" placeholder="user@example.com" />
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Imię</label>
-                <input @bind="newFirstName" class="form-control" />
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Nazwisko</label>
-                <input @bind="newLastName" class="form-control" />
-            </div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Hasło</label>
-            <input type="password" @bind="newPassword" class="form-control" placeholder="min. 8 znaków, wielka litera, znak specjalny" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Rola</label>
-            <select class="form-select" @bind="newRole">
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Biuro</label>
-            <select class="form-select" @bind="newOfficeId">
-                <option value="">— Brak —</option>
-                @if (offices != null)
-                {
-                    @foreach (var o in offices)
-                    {
-                        <option value="@o.Id">@o.Name</option>
-                    }
-                }
-            </select>
-        </div>
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="CreateUser" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span class="spinner-border spinner-border-sm"></span>
-                    <span> Tworzenie...</span>
-                }
-                else
-                {
-                    <span>Utwórz</span>
-                }
-            </button>
-            <button class="btn btn-outline-secondary w-100" @onclick="CancelForm">Anuluj</button>
-        </div>
-    </div>
+    <UserAddForm @ref="addForm"
+                 Offices="offices"
+                 IsLoading="isLoading"
+                 OnCreate="HandleCreateUser"
+                 OnCancel="CancelForm" />
 }
 
 @if (users == null)
@@ -95,195 +32,15 @@
 else if (users.Count == 0)
 {
     <div class="text-center mt-5 text-muted">
-        <i class="bi bi-people" style="font-size: 3rem;"></i>
+        <i class="bi bi-people empty-icon"></i>
         <p class="mt-2">Brak użytkowników.</p>
     </div>
 }
 else
 {
-    <div class="table-responsive shadow-sm rounded">
-        <table class="table align-middle bg-white table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>E-mail</th>
-                    <th>Imię i nazwisko</th>
-                    <th style="width: 120px;">Rola</th>
-                    <th style="width: 250px;">Biuro</th>
-                    <th style="width: 180px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var u in users)
-                {
-                    <tr>
-                        <td>@u.Email</td>
-                        <td>@($"{u.FirstName} {u.LastName}".Trim())</td>
-                        <td>
-                            @if (IsEditing(u.Id))
-                            {
-                                <select class="form-select form-select-sm" @bind="editRole">
-                                    <option value="User">User</option>
-                                    <option value="Admin">Admin</option>
-                                </select>
-                            }
-                            else
-                            {
-                                <span class="badge @(u.Role == "Admin" ? "bg-danger" : "bg-secondary")">@u.Role</span>
-                            }
-                        </td>
-                        <td>
-                            @if (IsEditing(u.Id))
-                            {
-                                <select class="form-select form-select-sm" @bind="editOfficeId">
-                                    <option value="">— Brak —</option>
-                                    @if (offices != null)
-                                    {
-                                        @foreach (var o in offices)
-                                        {
-                                            <option value="@o.Id">@o.Name</option>
-                                        }
-                                    }
-                                </select>
-                            }
-                            else
-                            {
-                                var office = offices?.FirstOrDefault(o => o.Id == u.OfficeId);
-                                @(office?.Name ?? "—")
-                            }
-                        </td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                @if (IsEditing(u.Id))
-                                {
-                                    <button class="btn btn-sm btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="() => SaveEdit(u.Id)">
-                                        <i class="bi bi-check"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(u)" disabled="@(u.Id == currentUserId)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUser(u.Id)" disabled="@(u.Id == currentUserId)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-@code {
-    private List<ManagedUser>? users;
-    private List<Office>? offices;
-    private string? currentUserId;
-
-    private bool showForm;
-    private bool isLoading;
-    private string? errorMessage;
-
-    private string newEmail = "";
-    private string newPassword = "";
-    private string newFirstName = "";
-    private string newLastName = "";
-    private string newRole = "User";
-    private string newOfficeId = "";
-
-    private string? editingUserId;
-    private string editRole = "User";
-    private string editOfficeId = "";
-
-    protected override async Task OnInitializedAsync()
-    {
-        var info = await CurrentUser.GetAsync();
-        currentUserId = info?.Id;
-        await LoadData();
-    }
-
-    private async Task LoadData()
-    {
-        users = await UserClient.GetUsersAsync();
-        offices = await OfficeClient.GetOfficesAsync();
-    }
-
-    private void ToggleAddForm()
-    {
-        showForm = !showForm;
-        if (showForm)
-        {
-            newEmail = "";
-            newPassword = "";
-            newFirstName = "";
-            newLastName = "";
-            newRole = "User";
-            newOfficeId = "";
-            errorMessage = null;
-        }
-    }
-
-    private void CancelForm()
-    {
-        showForm = false;
-        errorMessage = null;
-    }
-
-    private async Task CreateUser()
-    {
-        if (string.IsNullOrWhiteSpace(newEmail) || string.IsNullOrWhiteSpace(newPassword))
-        {
-            errorMessage = "E-mail i hasło są wymagane.";
-            return;
-        }
-
-        isLoading = true;
-        errorMessage = null;
-        int? officeId = int.TryParse(newOfficeId, out var o) ? o : null;
-        var (success, error) = await UserClient.CreateUserAsync(
-            newEmail, newPassword, officeId, newRole, newFirstName, newLastName);
-        if (success)
-        {
-            showForm = false;
-            await LoadData();
-        }
-        else
-        {
-            errorMessage = error ?? "Nie udało się utworzyć użytkownika.";
-        }
-        isLoading = false;
-    }
-
-    private bool IsEditing(string id) => editingUserId == id;
-
-    private void StartEdit(ManagedUser u)
-    {
-        editingUserId = u.Id;
-        editRole = string.IsNullOrWhiteSpace(u.Role) ? "User" : u.Role;
-        editOfficeId = u.OfficeId?.ToString() ?? "";
-    }
-
-    private void CancelEdit()
-    {
-        editingUserId = null;
-    }
-
-    private async Task SaveEdit(string id)
-    {
-        int? officeId = int.TryParse(editOfficeId, out var o) ? o : null;
-        await UserClient.UpdateUserAsync(id, officeId, editRole);
-        editingUserId = null;
-        await LoadData();
-    }
-
-    private async Task DeleteUser(string id)
-    {
-        await UserClient.DeleteUserAsync(id);
-        await LoadData();
-    }
+    <UsersTable Users="users"
+                Offices="offices"
+                CurrentUserId="currentUserId"
+                OnSave="HandleSaveUser"
+                OnDelete="DeleteUser" />
 }

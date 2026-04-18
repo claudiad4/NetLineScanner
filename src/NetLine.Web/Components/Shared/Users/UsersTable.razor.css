@@ -1,0 +1,8 @@
+.col-role { width: 120px; }
+.col-office { width: 250px; }
+.col-actions { width: 180px; }
+
+.users-table__save {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}

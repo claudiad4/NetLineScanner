@@ -1,0 +1,36 @@
+@using NetLine.Domain.Entities
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="bi bi-graph-up text-purple"></i> Statystyki</h6>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-6 border-end">
+                <p class="text-muted small mb-1">Offline</p>
+                <p class="h5 text-danger mb-0">@Alerts.Count(a => a.Type == AlertType.WentOffline)</p>
+            </div>
+            <div class="col-6">
+                <p class="text-muted small mb-1">Online</p>
+                <p class="h5 text-success mb-0">@Alerts.Count(a => a.Type == AlertType.CameOnline)</p>
+            </div>
+        </div>
+        <hr />
+        <div class="text-center">
+            <p class="text-muted small mb-1">Nieprzeczytane</p>
+            <p class="h5 text-purple mb-0">@Alerts.Count(a => !a.IsRead)</p>
+        </div>
+        <hr />
+        <button class="btn btn-sm btn-outline-danger w-100"
+                @onclick="OnClearAll"
+                disabled="@(IsLoading || !Alerts.Any())">
+            <i class="bi bi-trash"></i> Wyczyść wszystkie
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DeviceAlert> Alerts { get; set; } = [];
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnClearAll { get; set; }
+}

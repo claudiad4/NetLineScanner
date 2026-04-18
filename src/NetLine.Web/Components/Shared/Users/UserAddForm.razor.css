@@ -1,0 +1,8 @@
+.user-add-form {
+    max-width: 600px;
+}
+
+.user-add-form__save {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}
