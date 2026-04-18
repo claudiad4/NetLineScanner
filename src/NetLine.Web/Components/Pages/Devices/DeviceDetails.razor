@@ -1,4 +1,5 @@
 @page "/devices/{Id:int}"
+@namespace NetLine.Web.Components.Pages.Devices
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using NetLine.Web.Services
 @using NetLine.Domain.Entities
@@ -63,10 +64,10 @@ else
         @if (device != null)
         {
             <h1 class="mb-0">
-                <i class="bi @GetIconForType(device.DeviceType) text-purple"></i>
+                <i class="bi @DeviceIcons.GetIconForType(device.DeviceType) text-purple"></i>
                 @device.UserDefinedName
             </h1>
-            <span class="badge @GetStatusClass(device.Status) rounded-pill px-3">
+            <span class="badge @DeviceIcons.GetStatusClass(device.Status) rounded-pill px-3">
                 @device.Status
             </span>
             @if (!isAdmin)
@@ -222,7 +223,7 @@ else
                             @foreach (var alert in alerts)
                             {
                                 <div class="d-flex align-items-start mb-2 pb-2 border-bottom">
-                                    <i class="bi @GetAlertIcon(alert.Type) me-2 mt-1 @GetAlertColor(alert.Type)"></i>
+                                    <i class="bi @alert.Type.GetIcon() me-2 mt-1 @alert.Type.GetColorClass()"></i>
                                     <div class="flex-grow-1">
                                         <div class="small">@alert.Message</div>
                                         <small class="text-muted">@alert.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</small>

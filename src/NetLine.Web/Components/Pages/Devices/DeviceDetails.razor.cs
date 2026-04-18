@@ -6,12 +6,10 @@ using Microsoft.AspNetCore.Components;
 using NetLine.Web.Services;
 using NetLine.Domain.Entities;
 
-// Pamiętaj o dostosowaniu namespace do struktury swojego projektu!
-namespace NetLine.Web.Components.Pages
+namespace NetLine.Web.Components.Pages.Devices
 {
     public partial class DeviceDetails : ComponentBase
     {
-        // Wstrzykiwanie zależności za pomocą atrybutu [Inject] zamiast @inject
         [Inject] protected DeviceApiClient ApiClient { get; set; } = default!;
         [Inject] protected AlertApiClient AlertClient { get; set; } = default!;
         [Inject] protected CurrentUserService CurrentUser { get; set; } = default!;
@@ -53,10 +51,7 @@ namespace NetLine.Web.Components.Pages
             {
                 device = await ApiClient.GetDeviceAsync(Id);
 
-                if (device is null)
-                {
-                    return;
-                }
+                if (device is null) return;
 
                 if (!isAdmin && device.OfficeId != user?.OfficeId)
                 {
@@ -84,39 +79,6 @@ namespace NetLine.Web.Components.Pages
                 Nav.NavigateTo("/devices");
         }
 
-        protected string GetIconForType(string? type) => type switch
-        {
-            "Computer" => "bi-pc-display",
-            "Laptop" => "bi-laptop",
-            "Server" => "bi-hdd-network",
-            "Switch" => "bi-router",
-            "Printer" => "bi-printer",
-            "Smartphone" => "bi-phone",
-            "Tablet" => "bi-tablet",
-            _ => "bi-three-dots"
-        };
-
-        protected string GetStatusClass(string? status) => status switch
-        {
-            "Online" => "bg-success",
-            "Limited" => "bg-warning text-dark",
-            "Offline" => "bg-danger",
-            _ => "bg-secondary"
-        };
-
-        protected string GetAlertIcon(AlertType type) => type switch
-        {
-            AlertType.WentOffline => "bi-x-circle-fill",
-            AlertType.CameOnline => "bi-check-circle-fill",
-            AlertType.HighLatency => "bi-exclamation-circle-fill",
-            AlertType.HighPacketLoss => "bi-reception-0",
-            AlertType.HighCpuUsage => "bi-cpu-fill",
-            AlertType.HighMemoryUsage => "bi-memory",
-            AlertType.InterfaceDown => "bi-ethernet",
-            AlertType.ComponentFailure => "bi-tools",
-            _ => "bi-info-circle-fill"
-        };
-
         protected MarkupString RenderOrPlaceholder(string? value, bool small)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -127,18 +89,5 @@ namespace NetLine.Web.Components.Pages
             var encoded = System.Net.WebUtility.HtmlEncode(value);
             return new MarkupString(small ? $"<small>{encoded}</small>" : encoded);
         }
-
-        protected string GetAlertColor(AlertType type) => type switch
-        {
-            AlertType.WentOffline => "text-danger",
-            AlertType.CameOnline => "text-success",
-            AlertType.HighLatency => "text-warning",
-            AlertType.HighPacketLoss => "text-warning",
-            AlertType.HighCpuUsage => "text-danger",
-            AlertType.HighMemoryUsage => "text-danger",
-            AlertType.InterfaceDown => "text-warning",
-            AlertType.ComponentFailure => "text-secondary",
-            _ => "text-info"
-        };
     }
 }
