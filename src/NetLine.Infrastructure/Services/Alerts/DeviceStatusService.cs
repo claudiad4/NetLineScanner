@@ -26,12 +26,13 @@ public class DeviceStatusService : IDeviceStatusService
         _dbContext = dbContext;
     }
 
-    public async Task ProcessScanResultsAsync(
+    public async Task<IReadOnlyList<DeviceAlert>> ProcessScanResultsAsync(
         List<DeviceInfo> devices,
         IReadOnlyList<DeviceScanResult> scanResults,
         CancellationToken cancellationToken)
     {
         var byDeviceId = scanResults.ToDictionary(r => r.DeviceId);
+        var createdAlerts = new List<DeviceAlert>();
 
         foreach (var device in devices)
         {
@@ -43,24 +44,27 @@ public class DeviceStatusService : IDeviceStatusService
 
             PersistMetrics(device, scanResult);
 
+            var snapshot = ScanSnapshot.From(scanResult);
+
             var oldStatus = device.Status;
-            var newStatus = DetermineStatus(scanResult);
+            var newStatus = DetermineStatus(snapshot);
 
             device.LastScanned = DateTime.UtcNow;
-            device.PingResponseTimeMs = scanResult.PingResponseTimeMs;
+            device.PingResponseTimeMs = snapshot.PingResponseTimeMs;
             device.Status = newStatus;
-            UpdateSnmpSnapshot(device, newStatus, scanResult.SnmpData);
+            UpdateSnmpSnapshot(device, newStatus, snapshot);
 
             if (oldStatus != newStatus)
             {
-                AddStatusChangeAlert(device, newStatus);
+                createdAlerts.Add(AddStatusChangeAlert(device, newStatus));
             }
 
-            AddThresholdAlerts(device, scanResult);
-            AddComponentFailureAlerts(device, scanResult);
+            createdAlerts.AddRange(AddThresholdAlerts(device, scanResult));
+            createdAlerts.AddRange(AddComponentFailureAlerts(device, scanResult));
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return createdAlerts;
     }
 
     private void PersistMetrics(DeviceInfo device, DeviceScanResult scanResult)
@@ -86,17 +90,14 @@ public class DeviceStatusService : IDeviceStatusService
         }
     }
 
-    private static string DetermineStatus(DeviceScanResult scanResult)
+    private static string DetermineStatus(ScanSnapshot snapshot)
     {
-        var pingReachable = scanResult.PingResponseTimeMs.HasValue;
-        var snmpOk = scanResult.SnmpData.Success;
-
-        if (pingReachable && snmpOk) return "Online";
-        if (pingReachable) return "Limited";
+        if (snapshot.PingReachable && snapshot.SystemOk) return "Online";
+        if (snapshot.PingReachable) return "Limited";
         return "Offline";
     }
 
-    private void AddStatusChangeAlert(DeviceInfo device, string newStatus)
+    private DeviceAlert AddStatusChangeAlert(DeviceInfo device, string newStatus)
     {
         var (type, message) = newStatus switch
         {
@@ -104,70 +105,79 @@ public class DeviceStatusService : IDeviceStatusService
             _ => (AlertType.CameOnline, $"Urzadzenie {device.UserDefinedName} wrocilo do sieci.")
         };
 
-        _dbContext.DeviceAlerts.Add(new DeviceAlert
+        var alert = new DeviceAlert
         {
             DeviceInfoId = device.Id,
             Timestamp = DateTime.UtcNow,
             Type = type,
             Message = message
-        });
+        };
+        _dbContext.DeviceAlerts.Add(alert);
 
-        _logger.LogInformation("Status change for device {DeviceId}: {Status} — {Message}", device.Id, newStatus, message);
+        _logger.LogInformation("Status change for device {DeviceId}: {Status} - {Message}", device.Id, newStatus, message);
+        return alert;
     }
 
-    private void AddThresholdAlerts(DeviceInfo device, DeviceScanResult scanResult)
+    private List<DeviceAlert> AddThresholdAlerts(DeviceInfo device, DeviceScanResult scanResult)
     {
+        var created = new List<DeviceAlert>();
         var metrics = scanResult.ComponentResults.SelectMany(c => c.Metrics).ToList();
 
         var rtt = Find(metrics, "ping.rtt_avg_ms");
         if (rtt is double r && r > HighLatencyMs)
         {
-            AddAlert(device, AlertType.HighLatency, $"Wysokie opoznienie: {r:F0} ms");
+            created.Add(AddAlert(device, AlertType.HighLatency, $"Wysokie opoznienie: {r:F0} ms"));
         }
 
         var loss = Find(metrics, "ping.loss_pct");
         if (loss is double l && l >= HighLossPct && l < 100)
         {
-            AddAlert(device, AlertType.HighPacketLoss, $"Utracone pakiety: {l:F0}%");
+            created.Add(AddAlert(device, AlertType.HighPacketLoss, $"Utracone pakiety: {l:F0}%"));
         }
 
         var cpu = Find(metrics, "cpu.usage_avg");
         if (cpu is double c && c >= HighCpuPct)
         {
-            AddAlert(device, AlertType.HighCpuUsage, $"Wysokie obciazenie CPU: {c:F0}%");
+            created.Add(AddAlert(device, AlertType.HighCpuUsage, $"Wysokie obciazenie CPU: {c:F0}%"));
         }
 
         var mem = Find(metrics, "memory.usage_pct");
         if (mem is double m && m >= HighMemoryPct)
         {
-            AddAlert(device, AlertType.HighMemoryUsage, $"Wysokie uzycie pamieci: {m:F0}%");
+            created.Add(AddAlert(device, AlertType.HighMemoryUsage, $"Wysokie uzycie pamieci: {m:F0}%"));
         }
 
         var ifDown = metrics.FirstOrDefault(x => x.Key == "net.if.down");
         if (ifDown?.NumericValue is double d && d > 0)
         {
-            AddAlert(device, AlertType.InterfaceDown, $"Interfejsy w stanie down: {d:F0}");
+            created.Add(AddAlert(device, AlertType.InterfaceDown, $"Interfejsy w stanie down: {d:F0}"));
         }
+
+        return created;
     }
 
-    private void AddComponentFailureAlerts(DeviceInfo device, DeviceScanResult scanResult)
+    private List<DeviceAlert> AddComponentFailureAlerts(DeviceInfo device, DeviceScanResult scanResult)
     {
+        var created = new List<DeviceAlert>();
         foreach (var failed in scanResult.ComponentResults.Where(r => !r.Success))
         {
-            AddAlert(device, AlertType.ComponentFailure,
-                $"Komponent {failed.ComponentName} nie odpowiedzial: {failed.ErrorMessage}");
+            created.Add(AddAlert(device, AlertType.ComponentFailure,
+                $"Komponent {failed.ComponentName} nie odpowiedzial: {failed.ErrorMessage}"));
         }
+        return created;
     }
 
-    private void AddAlert(DeviceInfo device, AlertType type, string message)
+    private DeviceAlert AddAlert(DeviceInfo device, AlertType type, string message)
     {
-        _dbContext.DeviceAlerts.Add(new DeviceAlert
+        var alert = new DeviceAlert
         {
             DeviceInfoId = device.Id,
             Timestamp = DateTime.UtcNow,
             Type = type,
             Message = message
-        });
+        };
+        _dbContext.DeviceAlerts.Add(alert);
+        return alert;
     }
 
     private static double? Find(IEnumerable<ComponentMetric> metrics, string key)
@@ -176,16 +186,16 @@ public class DeviceStatusService : IDeviceStatusService
     private static string? Truncate(string? value, int max)
         => value is { Length: var n } && n > max ? value[..max] : value;
 
-    private static void UpdateSnmpSnapshot(DeviceInfo device, string newStatus, SNMPScanResult snmp)
+    private static void UpdateSnmpSnapshot(DeviceInfo device, string newStatus, ScanSnapshot snapshot)
     {
-        if (newStatus == "Online" && snmp.Success)
+        if (newStatus == "Online" && snapshot.SystemOk)
         {
-            device.SysName = snmp.Name;
-            device.SysDescr = snmp.Description;
-            device.SysLocation = snmp.Location;
-            device.SysContact = snmp.Contact;
-            device.SysUpTime = snmp.UpTime;
-            device.SysInterfacesCount = snmp.InterfacesCount;
+            device.SysName = snapshot.SysName;
+            device.SysDescr = snapshot.SysDescr;
+            device.SysLocation = snapshot.SysLocation;
+            device.SysContact = snapshot.SysContact;
+            device.SysUpTime = snapshot.SysUpTime;
+            device.SysInterfacesCount = snapshot.SysInterfacesCount;
         }
         else if (newStatus == "Offline")
         {
@@ -197,6 +207,45 @@ public class DeviceStatusService : IDeviceStatusService
             device.SysUpTime = null;
             device.SysInterfacesCount = null;
         }
-        // "Limited": keep last snapshot, just refresh what we got
+        // "Limited": keep last snapshot
+    }
+
+    /// <summary>
+    /// Distills the values that DeviceStatusService cares about out of the raw
+    /// component results, so the rest of the class doesn't have to re-walk them.
+    /// </summary>
+    private readonly record struct ScanSnapshot(
+        bool PingReachable,
+        long? PingResponseTimeMs,
+        bool SystemOk,
+        string? SysName,
+        string? SysDescr,
+        string? SysLocation,
+        string? SysContact,
+        string? SysUpTime,
+        int? SysInterfacesCount)
+    {
+        public static ScanSnapshot From(DeviceScanResult scan)
+        {
+            var metrics = scan.AllMetrics.ToList();
+            var pingReachable = metrics.FirstOrDefault(m => m.Key == "ping.reachable")?.TextValue == "true";
+            var rtt = metrics.FirstOrDefault(m => m.Key == "ping.rtt_avg_ms")?.NumericValue;
+            var systemOk = scan.ComponentResults.Any(c => c.ComponentName == "System" && c.Success);
+
+            int? ifCount = null;
+            var ifMetric = metrics.FirstOrDefault(m => m.Key == "sys.interfaces_count" || m.Key == "net.if.count");
+            if (ifMetric?.NumericValue is double v) ifCount = (int)Math.Round(v);
+
+            return new ScanSnapshot(
+                PingReachable: pingReachable,
+                PingResponseTimeMs: pingReachable && rtt.HasValue ? (long?)Math.Round(rtt.Value) : null,
+                SystemOk: systemOk,
+                SysName: metrics.FirstOrDefault(m => m.Key == "system.name")?.TextValue,
+                SysDescr: metrics.FirstOrDefault(m => m.Key == "system.descr")?.TextValue,
+                SysLocation: metrics.FirstOrDefault(m => m.Key == "system.location")?.TextValue,
+                SysContact: metrics.FirstOrDefault(m => m.Key == "system.contact")?.TextValue,
+                SysUpTime: metrics.FirstOrDefault(m => m.Key == "system.uptime")?.TextValue,
+                SysInterfacesCount: ifCount);
+        }
     }
 }

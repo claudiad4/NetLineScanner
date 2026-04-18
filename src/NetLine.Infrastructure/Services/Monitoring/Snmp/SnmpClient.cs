@@ -2,31 +2,41 @@ using System.Net;
 using System.Net.Sockets;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
-
-namespace NetLine.Infrastructure.Services.Monitoring.Snmp;
+using Microsoft.Extensions.Options;
 using NetLine.Application.Interfaces.Monitoring;
 
+namespace NetLine.Infrastructure.Services.Monitoring.Snmp;
+
+public class SnmpOptions
+{
+    public const string SectionName = "Snmp";
+    public string Community { get; set; } = "public";
+    public int TimeoutMs { get; set; } = 2000;
+    public int Port { get; set; } = 161;
+}
 
 /// <summary>
 /// Lightweight wrapper around SharpSnmpLib that exposes async Get/Walk primitives
 /// and uniform error handling for monitoring components.
 /// </summary>
-public sealed class SnmpClient: ISnmpClient
+public sealed class SnmpClient : ISnmpClient
 {
-    private const int DefaultTimeoutMs = 2000;
-    private const int DefaultPort = 161;
-
     private readonly string _community;
+    private readonly int _timeoutMs;
+    private readonly int _port;
 
-    public SnmpClient(string community = "public")
+    public SnmpClient(IOptions<SnmpOptions> options)
     {
-        _community = community;
+        var opt = options.Value;
+        _community = string.IsNullOrWhiteSpace(opt.Community) ? "public" : opt.Community;
+        _timeoutMs = opt.TimeoutMs > 0 ? opt.TimeoutMs : 2000;
+        _port = opt.Port > 0 ? opt.Port : 161;
     }
 
     public async Task<IReadOnlyList<Variable>?> GetAsync(string ipAddress, IEnumerable<string> oids, CancellationToken cancellationToken = default)
     {
         var variables = oids.Select(o => new Variable(new ObjectIdentifier(o))).ToList();
-        var endpoint = new IPEndPoint(IPAddress.Parse(ipAddress), DefaultPort);
+        var endpoint = new IPEndPoint(IPAddress.Parse(ipAddress), _port);
         var community = new OctetString(_community);
 
         try
@@ -36,7 +46,7 @@ public sealed class SnmpClient: ISnmpClient
                 endpoint,
                 community,
                 variables,
-                DefaultTimeoutMs), cancellationToken);
+                _timeoutMs), cancellationToken);
 
             return result.ToList();
         }
@@ -52,7 +62,7 @@ public sealed class SnmpClient: ISnmpClient
 
     public async Task<IReadOnlyList<Variable>> WalkAsync(string ipAddress, string rootOid, CancellationToken cancellationToken = default)
     {
-        var endpoint = new IPEndPoint(IPAddress.Parse(ipAddress), DefaultPort);
+        var endpoint = new IPEndPoint(IPAddress.Parse(ipAddress), _port);
         var community = new OctetString(_community);
         var results = new List<Variable>();
 
@@ -64,7 +74,7 @@ public sealed class SnmpClient: ISnmpClient
                 community,
                 new ObjectIdentifier(rootOid),
                 results,
-                DefaultTimeoutMs,
+                _timeoutMs,
                 WalkMode.WithinSubtree), cancellationToken);
         }
         catch (Lextm.SharpSnmpLib.Messaging.TimeoutException)

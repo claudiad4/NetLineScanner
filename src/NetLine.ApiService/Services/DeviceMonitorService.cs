@@ -9,8 +9,8 @@ namespace NetLine.ApiService.Services;
 
 /// <summary>
 /// Background service that orchestrates device monitoring.
-/// Responsible for coordinating scanning, status updates, and real-time notifications.
-/// Delegates specific concerns to IDeviceScanner and IDeviceStatusService.
+/// Delegates scanning to <see cref="IDeviceScanner"/> and status/alert handling
+/// to <see cref="IDeviceStatusService"/>, then fans out updates over SignalR.
 /// </summary>
 public class DeviceMonitorService : BackgroundService
 {
@@ -42,7 +42,6 @@ public class DeviceMonitorService : BackgroundService
                 var deviceScanner = scope.ServiceProvider.GetRequiredService<IDeviceScanner>();
                 var statusService = scope.ServiceProvider.GetRequiredService<IDeviceStatusService>();
 
-                // 1. Fetch all devices from database
                 var devices = await dbContext.DevicesInfo.ToListAsync(stoppingToken);
 
                 if (devices.Count == 0)
@@ -52,16 +51,36 @@ public class DeviceMonitorService : BackgroundService
                     continue;
                 }
 
-                // 2. Scan all devices concurrently
                 var scanResults = await deviceScanner.ScanDevicesAsync(devices, stoppingToken);
+                var newAlerts = await statusService.ProcessScanResultsAsync(devices, scanResults, stoppingToken);
 
-                // 3. Process scan results (update status, generate alerts, sanitize data)
-                await statusService.ProcessScanResultsAsync(devices, scanResults, stoppingToken);
-
-                // 4. Notify clients of status updates
                 await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", cancellationToken: stoppingToken);
 
-                _logger.LogDebug("Device monitoring cycle completed. Scanned {DeviceCount} devices.", devices.Count);
+                var devicesById = devices.ToDictionary(d => d.Id);
+                foreach (var alert in newAlerts)
+                {
+                    devicesById.TryGetValue(alert.DeviceInfoId, out var device);
+                    var payload = new
+                    {
+                        alert.Id,
+                        alert.DeviceInfoId,
+                        Type = alert.Type.ToString(),
+                        alert.Message,
+                        alert.Timestamp,
+                        alert.IsRead,
+                        Device = device is null ? null : new
+                        {
+                            device.Id,
+                            device.UserDefinedName,
+                            device.IpAddress,
+                            device.OfficeId
+                        }
+                    };
+                    await _hubContext.Clients.All.SendAsync("AlertCreated", payload, stoppingToken);
+                }
+
+                _logger.LogDebug("Monitoring cycle done. Devices={DeviceCount} NewAlerts={AlertCount}",
+                    devices.Count, newAlerts.Count);
             }
             catch (OperationCanceledException)
             {
@@ -73,7 +92,6 @@ public class DeviceMonitorService : BackgroundService
                 _logger.LogError(ex, "An error occurred during device monitoring.");
             }
 
-            // Wait before next scan
             await Task.Delay(_checkInterval, stoppingToken);
         }
 

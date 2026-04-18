@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NetLine.Infrastructure.Data;
 using NetLine.ApiService.Hubs;
 using NetLine.ApiService.Services;
@@ -11,7 +10,6 @@ using NetLine.Application.Interfaces.Alerts;
 using NetLine.Application.Interfaces.Devices;
 using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
-using NetLine.Infrastructure.Services.Monitoring;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 using NetLine.Infrastructure;
 using NetLine.Infrastructure.Identity;
@@ -19,7 +17,6 @@ using NetLine.Infrastructure.Services.Monitoring.Components.CPU;
 using NetLine.Infrastructure.Services.Monitoring.Components.Memory;
 using NetLine.Infrastructure.Services.Monitoring.Components.Network;
 using NetLine.Infrastructure.Services.Monitoring.Components.System;
-using NetLine.Infrastructure.Services.Monitoring.Components.Component;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -39,9 +36,8 @@ builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// Add application services
-builder.Services.AddSingleton<ISNMPService, SnmpService>();
-builder.Services.AddSingleton<IICMPService, ICMPService>();
+// SNMP transport — community / port / timeout from configuration ("Snmp" section)
+builder.Services.Configure<SnmpOptions>(builder.Configuration.GetSection(SnmpOptions.SectionName));
 builder.Services.AddSingleton<ISnmpClient, SnmpClient>();
 
 // Monitoring components — ordered to match the user-facing taxonomy
@@ -53,6 +49,7 @@ builder.Services.AddSingleton<IMonitoringComponent, PingComponent>();
 builder.Services.AddSingleton<IMonitoringComponent, PortScanComponent>();
 builder.Services.AddSingleton<IMonitoringComponent, DnsComponent>();
 
+// Scanning + status orchestration
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
 builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();
@@ -63,6 +60,7 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAntiforgery();
+builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>
