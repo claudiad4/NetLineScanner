@@ -11,7 +11,6 @@ public enum MonitoringCategory
     Health,
     Memory,
     Network,
-    Power,
     Raw,
     System
 }
