@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
-using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components;
 
@@ -14,11 +13,11 @@ namespace NetLine.Infrastructure.Services.Monitoring.Components;
 /// </summary>
 public sealed class NetworkInterfaceComponent : IMonitoringComponent
 {
-    private readonly SnmpClient _snmp;
+    private readonly ISnmpClient _snmp;
     private readonly ILogger<NetworkInterfaceComponent> _logger;
     private static readonly ConcurrentDictionary<int, OctetSnapshot> _lastSnapshot = new();
 
-    public NetworkInterfaceComponent(SnmpClient snmp, ILogger<NetworkInterfaceComponent> logger)
+    public NetworkInterfaceComponent(ISnmpClient snmp, ILogger<NetworkInterfaceComponent> logger)
     {
         _snmp = snmp;
         _logger = logger;

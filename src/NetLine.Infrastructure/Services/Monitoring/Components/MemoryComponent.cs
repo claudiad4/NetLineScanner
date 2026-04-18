@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
-using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components;
 
@@ -12,10 +11,10 @@ namespace NetLine.Infrastructure.Services.Monitoring.Components;
 /// </summary>
 public sealed class MemoryComponent : IMonitoringComponent
 {
-    private readonly SnmpClient _snmp;
+    private readonly ISnmpClient _snmp;
     private readonly ILogger<MemoryComponent> _logger;
 
-    public MemoryComponent(SnmpClient snmp, ILogger<MemoryComponent> logger)
+    public MemoryComponent(ISnmpClient snmp, ILogger<MemoryComponent> logger)
     {
         _snmp = snmp;
         _logger = logger;
