@@ -109,36 +109,34 @@ else
                 <div class="card shadow-sm">
                     <div class="card-header fw-bold text-purple bg-white d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-speedometer2"></i> Metryki (najnowsze)</span>
-                        <small class="text-muted">@metrics.Count pozycji</small>
+                        <small class="text-muted">@displayRows.Count pozycji</small>
                     </div>
                     <div class="card-body">
-                        @if (metrics.Count == 0)
+                        @foreach (var group in displayRows.GroupBy(r => r.Category).OrderBy(g => g.Key.ToString()))
                         {
-                            <p class="text-muted mb-0">Brak zebranych metryk. Poczekaj na nastepny cykl skanu.</p>
-                        }
-                        else
-                        {
-                            @foreach (var group in metrics.GroupBy(m => m.Category).OrderBy(g => g.Key.ToString()))
-                            {
-                                <h6 class="text-purple mt-3">@group.Key</h6>
-                                <table class="table table-sm">
-                                    <tbody>
-                                        @foreach (var m in group.OrderBy(x => x.MetricKey))
-                                        {
-                                            <tr>
-                                                <td class="text-muted" style="width: 30%;"><code>@m.MetricKey</code></td>
-                                                <td style="width: 25%;">@(m.Label ?? "")</td>
-                                                <td>
-                                                    @(m.NumericValue.HasValue
-                                                        ? $"{m.NumericValue.Value:0.##} {m.Unit}"
-                                                        : m.TextValue)
-                                                </td>
-                                                <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            }
+                            <h6 class="text-purple mt-3">@group.Key</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    @foreach (var r in group.OrderBy(x => x.Key))
+                                    {
+                                        <tr class="@(r.IsAvailable ? "" : "text-muted")">
+                                            <td class="text-muted" style="width: 30%;"><code>@r.Key</code></td>
+                                            <td style="width: 25%;">@r.Label</td>
+                                            <td>
+                                                @if (r.IsAvailable)
+                                                {
+                                                    @r.Value
+                                                }
+                                                else
+                                                {
+                                                    <em>@r.Value</em>
+                                                }
+                                            </td>
+                                            <td class="text-muted small">@(r.Timestamp ?? "")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         }
                     </div>
                 </div>
@@ -207,9 +205,20 @@ else
     private DeviceInfo? device;
     private List<DeviceAlert> alerts = [];
     private List<DeviceMetric> metrics = [];
+    private List<MetricDisplayRow> displayRows = [];
     private CurrentUserInfo? user;
     private bool isAdmin;
     private bool accessDenied;
+
+    private const string UnavailableText = "unavailable, no data from device";
+
+    private sealed record MetricDisplayRow(
+        MonitoringCategory Category,
+        string Key,
+        string Label,
+        string Value,
+        string? Timestamp,
+        bool IsAvailable);
 
     protected override async Task OnInitializedAsync()
     {
@@ -234,11 +243,68 @@ else
 
             alerts = await AlertClient.GetAlertsAsync(deviceId: Id, limit: 50);
             metrics = await ApiClient.GetLatestMetricsAsync(Id);
+            displayRows = BuildDisplayRows(metrics);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"ERROR: {ex.Message}");
         }
+    }
+
+    private static List<MetricDisplayRow> BuildDisplayRows(List<DeviceMetric> collected)
+    {
+        var byKey = collected
+            .GroupBy(m => m.MetricKey)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        var rows = new List<MetricDisplayRow>();
+
+        foreach (var expected in ExpectedMetricsCatalog.All)
+        {
+            if (byKey.TryGetValue(expected.Key, out var m))
+            {
+                rows.Add(new MetricDisplayRow(
+                    m.Category,
+                    m.MetricKey,
+                    m.Label ?? expected.Label,
+                    FormatValue(m),
+                    m.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
+                    true));
+            }
+            else
+            {
+                rows.Add(new MetricDisplayRow(
+                    expected.Category,
+                    expected.Key,
+                    expected.Label,
+                    UnavailableText,
+                    null,
+                    false));
+            }
+        }
+
+        foreach (var m in collected.Where(m => !ExpectedMetricsCatalog.AllKeys.Contains(m.MetricKey)))
+        {
+            rows.Add(new MetricDisplayRow(
+                m.Category,
+                m.MetricKey,
+                m.Label ?? "",
+                FormatValue(m),
+                m.Timestamp.ToLocalTime().ToString("HH:mm:ss"),
+                true));
+        }
+
+        return rows;
+    }
+
+    private static string FormatValue(DeviceMetric m)
+    {
+        if (m.NumericValue.HasValue)
+        {
+            var unit = string.IsNullOrWhiteSpace(m.Unit) ? "" : $" {m.Unit}";
+            return $"{m.NumericValue.Value:0.##}{unit}";
+        }
+        return m.TextValue ?? "";
     }
 
     private void GoBack()

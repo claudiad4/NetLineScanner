@@ -57,7 +57,6 @@ public class DeviceStatusService : IDeviceStatusService
             }
 
             AddThresholdAlerts(device, scanResult);
-            AddComponentFailureAlerts(device, scanResult);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -147,15 +146,6 @@ public class DeviceStatusService : IDeviceStatusService
         if (ifDown?.NumericValue is double d && d > 0)
         {
             AddAlert(device, AlertType.InterfaceDown, $"Interfejsy w stanie down: {d:F0}");
-        }
-    }
-
-    private void AddComponentFailureAlerts(DeviceInfo device, DeviceScanResult scanResult)
-    {
-        foreach (var failed in scanResult.ComponentResults.Where(r => !r.Success))
-        {
-            AddAlert(device, AlertType.ComponentFailure,
-                $"Komponent {failed.ComponentName} nie odpowiedzial: {failed.ErrorMessage}");
         }
     }
 
