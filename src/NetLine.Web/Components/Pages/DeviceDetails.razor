@@ -21,6 +21,26 @@
         border-left: 4px solid #6f42c1;
     }
 
+    .device-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+    }
+
+        .device-tabs .nav-link:hover {
+            color: #6f42c1;
+            border-bottom-color: #d6c4ea;
+        }
+
+        .device-tabs .nav-link.active {
+            color: #6f42c1;
+            background: transparent;
+            border-bottom-color: #6f42c1;
+        }
+
     @@keyframes fadeIn {
         from {
             opacity: 0;
@@ -104,81 +124,105 @@ else
             </div>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-12 mb-3">
-                <div class="card shadow-sm">
-                    <div class="card-header fw-bold text-purple bg-white d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-speedometer2"></i> Metryki (najnowsze)</span>
-                        <small class="text-muted">@metrics.Count pozycji</small>
-                    </div>
-                    <div class="card-body">
-                        @if (metrics.Count == 0)
-                        {
-                            <p class="text-muted mb-0">Brak zebranych metryk. Poczekaj na nastepny cykl skanu.</p>
-                        }
-                        else
-                        {
-                            @foreach (var group in metrics.GroupBy(m => m.Category).OrderBy(g => g.Key.ToString()))
-                            {
-                                <h6 class="text-purple mt-3">@group.Key</h6>
-                                <table class="table table-sm">
-                                    <tbody>
-                                        @foreach (var m in group.OrderBy(x => x.MetricKey))
-                                        {
-                                            <tr>
-                                                <td class="text-muted" style="width: 30%;"><code>@m.MetricKey</code></td>
-                                                <td style="width: 25%;">@(m.Label ?? "")</td>
-                                                <td>
-                                                    @(m.NumericValue.HasValue
-                                                        ? $"{m.NumericValue.Value:0.##} {m.Unit}"
-                                                        : m.TextValue)
-                                                </td>
-                                                <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            }
-                        }
-                    </div>
-                </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white p-0">
+                <ul class="nav nav-tabs device-tabs flex-wrap" role="tablist">
+                    @foreach (var tab in availableTabs)
+                    {
+                        <li class="nav-item" role="presentation">
+                            <button type="button"
+                                    class="nav-link @(activeTab == tab.Key ? "active" : "")"
+                                    @onclick="() => activeTab = tab.Key">
+                                <i class="bi @tab.Icon me-1"></i> @tab.Label
+                                @if (tab.Badge.HasValue && tab.Badge.Value > 0)
+                                {
+                                    <span class="badge bg-secondary ms-1">@tab.Badge</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
             </div>
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header fw-bold text-purple bg-white">
-                        <i class="bi bi-info-square"></i> Informacje systemowe
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-sm">
+            <div class="card-body">
+                @if (activeTab == "system")
+                {
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 30%;">Typ</td>
+                                <td>@RenderOrPlaceholder(device.DeviceType, false)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Nazwa SNMP</td>
+                                <td>@RenderOrPlaceholder(device.SysName, false)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Lokalizacja</td>
+                                <td>@RenderOrPlaceholder(device.SysLocation, false)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Kontakt</td>
+                                <td>@RenderOrPlaceholder(device.SysContact, false)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">UpTime</td>
+                                <td>@RenderOrPlaceholder(device.SysUpTime, false)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Opis</td>
+                                <td>@RenderOrPlaceholder(device.SysDescr, true)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    var systemMetrics = metrics.Where(m => m.Category == MonitoringCategory.System).OrderBy(m => m.MetricKey).ToList();
+                    if (systemMetrics.Count > 0)
+                    {
+                        <h6 class="text-purple mt-4">Dodatkowe metryki systemowe</h6>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-muted small" style="width: 30%;">Klucz</th>
+                                    <th class="text-muted small" style="width: 25%;">Etykieta</th>
+                                    <th class="text-muted small">Wartość</th>
+                                    <th class="text-muted small">Czas</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                <tr><td class="text-muted">Typ</td><td>@device.DeviceType</td></tr>
-                                <tr><td class="text-muted">Nazwa SNMP</td><td>@(device.SysName ?? "Brak danych")</td></tr>
-                                <tr><td class="text-muted">Lokalizacja</td><td>@(device.SysLocation ?? "Brak danych")</td></tr>
-                                <tr><td class="text-muted">Kontakt</td><td>@(device.SysContact ?? "Brak danych")</td></tr>
-                                <tr><td class="text-muted">UpTime</td><td>@(device.SysUpTime ?? "Brak danych")</td></tr>
-                                <tr><td class="text-muted">Opis</td><td><small>@(device.SysDescr ?? "Brak danych")</small></td></tr>
+                                @foreach (var m in systemMetrics)
+                                {
+                                    <tr>
+                                        <td><code>@m.MetricKey</code></td>
+                                        <td>@(m.Label ?? "")</td>
+                                        <td>
+                                            @if (m.NumericValue.HasValue)
+                                            {
+                                                @($"{m.NumericValue.Value:0.##} {m.Unit}")
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(m.TextValue))
+                                            {
+                                                @m.TextValue
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fst-italic">@NoDataText</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                    </tr>
+                                }
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header fw-bold text-purple bg-white d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-bell"></i> Historia alertów</span>
-                        @if (alerts.Count > 0)
-                        {
-                            <span class="badge bg-secondary">@alerts.Count</span>
-                        }
-                    </div>
-                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                        @if (alerts.Count == 0)
-                        {
-                            <p class="text-muted text-center mt-3">Brak alertów dla tego urządzenia.</p>
-                        }
-                        else
-                        {
+                    }
+                }
+                else if (activeTab == "alerts")
+                {
+                    @if (alerts.Count == 0)
+                    {
+                        <p class="text-muted mb-0">Brak alertów dla tego urządzenia.</p>
+                    }
+                    else
+                    {
+                        <div style="max-height: 600px; overflow-y: auto;">
                             @foreach (var alert in alerts)
                             {
                                 <div class="d-flex align-items-start mb-2 pb-2 border-bottom">
@@ -193,9 +237,57 @@ else
                                     }
                                 </div>
                             }
-                        }
-                    </div>
-                </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    var category = Enum.TryParse<MonitoringCategory>(activeTab, true, out var parsed) ? (MonitoringCategory?)parsed : null;
+                    var categoryMetrics = category.HasValue
+                    ? metrics.Where(m => m.Category == category.Value).OrderBy(m => m.MetricKey).ToList()
+                    : new List<DeviceMetric>();
+                    if (categoryMetrics.Count == 0)
+                    {
+                        <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> Urządzenie nie wysłało danych w tej kategorii.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-muted small" style="width: 30%;">Klucz</th>
+                                    <th class="text-muted small" style="width: 25%;">Etykieta</th>
+                                    <th class="text-muted small">Wartość</th>
+                                    <th class="text-muted small">Czas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in categoryMetrics)
+                                {
+                                    <tr>
+                                        <td><code>@m.MetricKey</code></td>
+                                        <td>@(m.Label ?? "")</td>
+                                        <td>
+                                            @if (m.NumericValue.HasValue)
+                                            {
+                                                @($"{m.NumericValue.Value:0.##} {m.Unit}")
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(m.TextValue))
+                                            {
+                                                @m.TextValue
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fst-italic">@NoDataText</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                }
             </div>
         </div>
     }
@@ -204,12 +296,30 @@ else
 @code {
     [Parameter] public int Id { get; set; }
 
+    private const string NoDataText = "Brak danych od urządzenia";
+
     private DeviceInfo? device;
     private List<DeviceAlert> alerts = [];
     private List<DeviceMetric> metrics = [];
     private CurrentUserInfo? user;
     private bool isAdmin;
     private bool accessDenied;
+    private string activeTab = "system";
+
+    private record TabDefinition(string Key, string Label, string Icon, int? Badge = null);
+
+    private IEnumerable<TabDefinition> availableTabs => new List<TabDefinition>
+    {
+        new("system", "System", "bi-info-square"),
+        new(nameof(MonitoringCategory.Cpu), "CPU", "bi-cpu"),
+        new(nameof(MonitoringCategory.Memory), "Pamięć", "bi-memory"),
+        new(nameof(MonitoringCategory.Network), "Sieć", "bi-diagram-3"),
+        new(nameof(MonitoringCategory.Component), "Komponenty", "bi-hdd-stack"),
+        new(nameof(MonitoringCategory.Health), "Stan", "bi-heart-pulse"),
+        new(nameof(MonitoringCategory.Power), "Zasilanie", "bi-plug"),
+        new(nameof(MonitoringCategory.Raw), "Surowe", "bi-braces"),
+        new("alerts", "Alerty", "bi-bell", alerts.Count),
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -283,6 +393,17 @@ else
         AlertType.ComponentFailure => "bi-tools",
         _ => "bi-info-circle-fill"
     };
+
+    private MarkupString RenderOrPlaceholder(string? value, bool small)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return new MarkupString($"<span class=\"text-muted fst-italic\">{System.Net.WebUtility.HtmlEncode(NoDataText)}</span>");
+        }
+
+        var encoded = System.Net.WebUtility.HtmlEncode(value);
+        return new MarkupString(small ? $"<small>{encoded}</small>" : encoded);
+    }
 
     private string GetAlertColor(AlertType type) => type switch
     {
