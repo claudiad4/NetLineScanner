@@ -53,7 +53,9 @@ builder.Services.AddSingleton<IMonitoringComponent, DnsComponent>();
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
 builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();
+builder.Services.AddSingleton<IDeviceScanQueue, DeviceScanQueue>();
 builder.Services.AddHostedService<DeviceMonitorService>();
+builder.Services.AddHostedService<DeviceScanWorker>();
 
 // Add API services
 builder.Services.AddSignalR();

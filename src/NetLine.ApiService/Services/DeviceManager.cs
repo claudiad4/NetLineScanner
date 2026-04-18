@@ -11,11 +11,13 @@ public class DeviceManager : IDeviceManager
 {
     private readonly AppDbContext _db;
     private readonly IDeviceScanner _scanner;
+    private readonly IDeviceScanQueue _scanQueue;
 
-    public DeviceManager(AppDbContext db, IDeviceScanner scanner)
+    public DeviceManager(AppDbContext db, IDeviceScanner scanner, IDeviceScanQueue scanQueue)
     {
         _db = db;
         _scanner = scanner;
+        _scanQueue = scanQueue;
     }
 
     public async Task<IEnumerable<DeviceInfo>> GetAllAsync()
@@ -48,23 +50,14 @@ public class DeviceManager : IDeviceManager
             LastScanned = DateTime.UtcNow
         };
 
-        try
-        {
-            var scan = await _scanner.ScanDeviceAsync(device, CancellationToken.None);
-            ApplyInitialSnapshot(device, scan);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Failed to scan device at {request.Ip}: {ex.Message}", ex);
-        }
-
         _db.DevicesInfo.Add(device);
         await _db.SaveChangesAsync();
+
+        await _scanQueue.EnqueueAsync(device.Id);
         return device;
     }
 
-    private static void ApplyInitialSnapshot(DeviceInfo device, DeviceScanResult scan)
+    internal static void ApplyInitialSnapshot(DeviceInfo device, DeviceScanResult scan)
     {
         var metrics = scan.AllMetrics.ToList();
 
