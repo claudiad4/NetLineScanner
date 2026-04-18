@@ -1,0 +1,32 @@
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.badge-unread {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 20px;
+}
+
+.error-banner {
+    background-color: #f8d7da;
+    border: 1px solid #f5c2c7;
+    color: #842029;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}

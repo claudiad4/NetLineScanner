@@ -1,48 +1,16 @@
 @page "/offices"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using NetLine.Web.Services
-@using NetLine.Domain.Entities
 @rendermode InteractiveServer
-@inject OfficeApiClient ApiClient
-@inject CurrentUserService CurrentUser
-@inject NavigationManager Nav
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <PageTitle>Biura</PageTitle>
 
-<style>
-    .text-purple {
-        color: #6f42c1 !important;
-    }
-
-    .office-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        cursor: pointer;
-    }
-
-    .office-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 20px rgba(111, 66, 193, 0.15) !important;
-    }
-
-    .office-icon {
-        width: 50px;
-        height: 50px;
-        background-color: #e9ecef;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-    }
-</style>
-
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-building text-purple"></i> Biura</h1>
     @if (isAdmin)
     {
-        <button class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="ToggleAddForm">
+        <button class="btn btn-primary header-btn-purple" @onclick="ToggleAddForm">
             <i class="bi bi-plus-lg"></i> Dodaj biuro
         </button>
     }
@@ -50,35 +18,11 @@
 
 @if (isAdmin && showForm)
 {
-    <div class="card p-4 mb-4 shadow-sm" style="max-width: 500px;">
-        <h5 class="mb-3">@(editingOfficeId is null ? "Nowe biuro" : "Edytuj biuro")</h5>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Nazwa biura</label>
-            <input @bind="newName" class="form-control" placeholder="np. Biuro Warszawa" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Lokalizacja (opcjonalnie)</label>
-            <input @bind="newLocation" class="form-control" placeholder="np. ul. Marszałkowska 1" />
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary w-100" style="background-color: #6f42c1; border-color: #6f42c1;" @onclick="SaveOffice" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span class="spinner-border spinner-border-sm"></span>
-                    <span> Zapisywanie...</span>
-                }
-                else
-                {
-                    <span>@(editingOfficeId is null ? "Dodaj" : "Zapisz")</span>
-                }
-            </button>
-            <button class="btn btn-outline-secondary w-100" @onclick="CancelForm">Anuluj</button>
-        </div>
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger mt-3">@errorMessage</div>
-        }
-    </div>
+    <OfficeFormCard @ref="formCard"
+                    EditingOffice="editingOffice"
+                    IsLoading="isLoading"
+                    OnSave="HandleSave"
+                    OnCancel="CancelForm" />
 }
 
 @if (!isAdmin && user?.OfficeId is null)
@@ -87,7 +31,7 @@
         <i class="bi bi-exclamation-circle"></i> Nie zostałeś/aś jeszcze przypisany/a do żadnego biura. Skontaktuj się z administratorem.
     </div>
 }
-else if (offices == null)
+else if (offices is null)
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
@@ -97,7 +41,7 @@ else if (offices == null)
 else if (offices.Count == 0)
 {
     <div class="text-center mt-5 text-muted">
-        <i class="bi bi-building" style="font-size: 3rem;"></i>
+        <i class="bi bi-building empty-icon"></i>
         <p class="mt-2">Brak biur. @(isAdmin ? "Dodaj pierwsze biuro." : "Brak przypisanego biura.")</p>
     </div>
 }
@@ -106,151 +50,11 @@ else
     <div class="row">
         @foreach (var office in offices)
         {
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100 office-card" @onclick='() => Nav.NavigateTo($"/offices/{office.Id}")'>
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="office-icon me-3">
-                                <i class="bi bi-building text-purple"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-0 fw-bold">@office.Name</h5>
-                                <small class="text-muted">@(office.Location ?? "Brak lokalizacji")</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Dodano: @office.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</small>
-                        @if (isAdmin)
-                        {
-                            <div class="d-flex gap-1" @onclick:stopPropagation="true">
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditOffice(office)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteOffice(office.Id)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
+            <OfficeCard Office="office"
+                        ShowAdminActions="isAdmin"
+                        OnOpen="OpenOffice"
+                        OnEdit="StartEdit"
+                        OnDelete="DeleteOffice" />
         }
     </div>
-}
-
-@code {
-    private List<Office>? offices;
-    private CurrentUserInfo? user;
-    private bool isAdmin;
-
-    private string newName = "";
-    private string? newLocation;
-    private int? editingOfficeId;
-    private bool isLoading = false;
-    private bool showForm = false;
-    private string? errorMessage;
-
-    protected override async Task OnInitializedAsync()
-    {
-        user = await CurrentUser.GetAsync();
-        isAdmin = user?.IsAdmin == true;
-
-        await LoadOffices();
-    }
-
-    private async Task LoadOffices()
-    {
-        var all = await ApiClient.GetOfficesAsync();
-        if (isAdmin)
-        {
-            offices = all;
-        }
-        else if (user?.OfficeId is int officeId)
-        {
-            offices = all.Where(o => o.Id == officeId).ToList();
-        }
-        else
-        {
-            offices = [];
-        }
-    }
-
-    private void ToggleAddForm()
-    {
-        if (showForm)
-        {
-            CancelForm();
-        }
-        else
-        {
-            editingOfficeId = null;
-            newName = "";
-            newLocation = null;
-            errorMessage = null;
-            showForm = true;
-        }
-    }
-
-    private void EditOffice(Office office)
-    {
-        editingOfficeId = office.Id;
-        newName = office.Name;
-        newLocation = office.Location;
-        errorMessage = null;
-        showForm = true;
-    }
-
-    private void CancelForm()
-    {
-        showForm = false;
-        editingOfficeId = null;
-        newName = "";
-        newLocation = null;
-        errorMessage = null;
-    }
-
-    private async Task SaveOffice()
-    {
-        if (!isAdmin) return;
-
-        if (string.IsNullOrWhiteSpace(newName))
-        {
-            errorMessage = "Nazwa biura jest wymagana.";
-            return;
-        }
-
-        isLoading = true;
-        errorMessage = null;
-
-        bool success;
-        string? error;
-        if (editingOfficeId is null)
-        {
-            (success, error) = await ApiClient.AddOfficeAsync(newName, newLocation);
-        }
-        else
-        {
-            (success, error) = await ApiClient.UpdateOfficeAsync(editingOfficeId.Value, newName, newLocation);
-        }
-
-        if (success)
-        {
-            CancelForm();
-            await LoadOffices();
-        }
-        else
-        {
-            errorMessage = error ?? "Nie udało się zapisać biura.";
-        }
-
-        isLoading = false;
-    }
-
-    private async Task DeleteOffice(int id)
-    {
-        if (!isAdmin) return;
-        await ApiClient.DeleteOfficeAsync(id);
-        await LoadOffices();
-    }
 }

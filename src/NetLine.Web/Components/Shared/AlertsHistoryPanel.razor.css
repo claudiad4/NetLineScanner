@@ -1,0 +1,73 @@
+.alerts-panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+}
+
+.panel-header {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.alerts-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    padding: 12px 15px;
+    border-left: 3px solid #dee2e6;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.alert-item:hover {
+    background-color: #f8f9fa;
+}
+
+.alert-item.border-danger {
+    border-left-color: #dc3545;
+}
+
+.alert-item.border-success {
+    border-left-color: #28a745;
+}
+
+.alert-icon {
+    min-width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-icon-glyph {
+    font-size: 1.2rem;
+}
+
+.empty-icon {
+    font-size: 2rem;
+    color: #ccc;
+}
+
+.alerts-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.alerts-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.alerts-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.alerts-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

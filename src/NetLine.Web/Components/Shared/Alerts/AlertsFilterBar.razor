@@ -1,0 +1,32 @@
+@using NetLine.Domain.Entities
+
+<div class="mb-4 d-flex gap-2 flex-wrap">
+    <button class="btn btn-outline-secondary filter-btn @(SelectedFilter == null ? "active" : "")"
+            @onclick="() => OnFilterChanged.InvokeAsync(null)"
+            disabled="@IsLoading">
+        <i class="bi bi-funnel"></i> Wszystkie (@Alerts.Count)
+    </button>
+    <button class="btn btn-outline-secondary filter-btn @(SelectedFilter == AlertType.WentOffline ? "active" : "")"
+            @onclick="() => OnFilterChanged.InvokeAsync(AlertType.WentOffline)"
+            disabled="@IsLoading">
+        <i class="bi bi-x-circle text-danger"></i> Offline (@Alerts.Count(a => a.Type == AlertType.WentOffline))
+    </button>
+    <button class="btn btn-outline-secondary filter-btn @(SelectedFilter == AlertType.CameOnline ? "active" : "")"
+            @onclick="() => OnFilterChanged.InvokeAsync(AlertType.CameOnline)"
+            disabled="@IsLoading">
+        <i class="bi bi-check-circle text-success"></i> Online (@Alerts.Count(a => a.Type == AlertType.CameOnline))
+    </button>
+    <button class="btn btn-outline-secondary ms-auto"
+            @onclick="OnMarkAllRead"
+            disabled="@(IsLoading || !Alerts.Any(a => !a.IsRead))">
+        <i class="bi bi-check2-all"></i> Oznacz wszystkie jako przeczytane
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DeviceAlert> Alerts { get; set; } = [];
+    [Parameter] public AlertType? SelectedFilter { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<AlertType?> OnFilterChanged { get; set; }
+    [Parameter] public EventCallback OnMarkAllRead { get; set; }
+}

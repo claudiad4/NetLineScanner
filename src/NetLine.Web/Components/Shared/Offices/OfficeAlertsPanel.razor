@@ -1,0 +1,49 @@
+@using NetLine.Domain.Entities
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-purple"><i class="bi bi-bell"></i> Alerty biura</span>
+        @if (Alerts is not null)
+        {
+            <span class="badge bg-secondary">@Alerts.Count</span>
+        }
+    </div>
+    <div class="card-body office-alerts-body">
+        @if (Alerts is null)
+        {
+            <div class="text-center text-muted small">Ładowanie alertów...</div>
+        }
+        else if (Alerts.Count == 0)
+        {
+            <div class="text-center text-muted small">
+                <i class="bi bi-check-circle"></i> Brak alertów dla tego biura.
+            </div>
+        }
+        else
+        {
+            @foreach (var alert in Alerts)
+            {
+                var isOffline = alert.Type == AlertType.WentOffline;
+                <div class="alert-item @(isOffline ? "offline" : "online")">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="small fw-bold">
+                                <i class="bi @(isOffline ? "bi-x-circle text-danger" : "bi-check-circle text-success")"></i>
+                                @alert.Message
+                            </div>
+                            <small class="text-muted">@alert.Timestamp.ToLocalTime().ToString("dd.MM HH:mm:ss")</small>
+                        </div>
+                        @if (!alert.IsRead)
+                        {
+                            <span class="badge bg-danger alert-item__new-badge">Nowy</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DeviceAlert>? Alerts { get; set; }
+}

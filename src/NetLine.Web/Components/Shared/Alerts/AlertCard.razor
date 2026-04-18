@@ -1,0 +1,49 @@
+@using NetLine.Domain.Entities
+
+@{
+    var isOffline = Alert.Type == AlertType.WentOffline;
+    var cardClass = isOffline ? "alert-offline" : "alert-online";
+    var icon = isOffline ? "bi-x-circle" : "bi-check-circle";
+}
+
+<div class="card alert-card @cardClass">
+    <div class="card-body">
+        <div class="d-flex gap-3">
+            <div class="alert-icon">
+                <i class="bi @icon"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title mb-1">@Alert.Message</h6>
+                        <p class="card-text small text-muted mb-0">
+                            <i class="bi bi-clock"></i>
+                            <span class="alert-time">@Alert.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</span>
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        @if (!Alert.IsRead)
+                        {
+                            <button class="btn btn-sm btn-outline-primary"
+                                    @onclick="() => OnMarkRead.InvokeAsync(Alert.Id)"
+                                    disabled="@IsLoading"
+                                    title="Oznacz jako przeczytane">
+                                <i class="bi bi-check2"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light text-muted">Przeczytane</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DeviceAlert Alert { get; set; } = default!;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<int> OnMarkRead { get; set; }
+}

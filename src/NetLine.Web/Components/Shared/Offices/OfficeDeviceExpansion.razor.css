@@ -1,0 +1,16 @@
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.details-container {
+    padding: 20px;
+    border-left: 5px solid #6f42c1;
+    margin: 10px 0 10px 40px;
+    background: white;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.device-descr {
+    font-size: 0.75rem;
+}

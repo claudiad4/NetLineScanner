@@ -41,6 +41,9 @@ namespace NetLine.Web.Components.Pages.Devices
             new("alerts", "Alerty", "bi-bell", alerts.Count),
         };
 
+        protected List<DeviceMetric> MetricsFor(MonitoringCategory category)
+            => metrics.Where(m => m.Category == category).OrderBy(m => m.MetricKey).ToList();
+
         protected override async Task OnInitializedAsync()
         {
             user = await CurrentUser.GetAsync();

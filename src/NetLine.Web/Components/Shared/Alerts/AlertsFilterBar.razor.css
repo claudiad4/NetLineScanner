@@ -1,0 +1,8 @@
+.filter-btn {
+    transition: all 0.2s ease;
+}
+
+.filter-btn.active {
+    background-color: #6f42c1 !important;
+    color: white !important;
+}

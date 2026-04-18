@@ -1,0 +1,100 @@
+@using NetLine.Domain.Entities
+@using NetLine.Web.Components.Pages.Devices
+
+<div class="table-responsive shadow-sm rounded">
+    <table class="table align-middle bg-white table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th class="col-chevron"></th>
+                <th class="col-status">Status</th>
+                <th class="col-protocol">Protokół</th>
+                <th>Urządzenie</th>
+                <th>Adres IP</th>
+                <th>Ostatni skan</th>
+                @if (ShowAdminActions)
+                {
+                    <th class="col-actions"></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in Devices)
+            {
+                <tr @onclick="() => OnToggle.InvokeAsync(device.Id)">
+                    <td class="text-center">
+                        <i class="bi @(ExpandedDeviceId == device.Id ? "bi-chevron-down text-purple" : "bi-chevron-right text-muted")"></i>
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill @DeviceIcons.GetStatusClass(device.Status) w-100 shadow-sm">
+                            <i class="bi @StatusIcon(device.Status)"></i> @device.Status
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
+                            <span class="badge @(HasSnmp(device) ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle device-icon-circle">
+                                <i class="bi @DeviceIcons.GetIconForType(device.DeviceType) device-icon-glyph"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">@device.UserDefinedName</div>
+                                <small class="text-muted"><i class="bi bi-tag"></i> @device.DeviceType</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
+                    <td><small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
+                    @if (ShowAdminActions)
+                    {
+                        <td>
+                            <div class="d-flex gap-1" @onclick:stopPropagation="true">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => OnEditDevice.InvokeAsync(device)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => OnDeleteDevice.InvokeAsync(device.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    }
+                </tr>
+
+                @if (ExpandedDeviceId == device.Id)
+                {
+                    <tr class="detail-row">
+                        <td colspan="@(ShowAdminActions ? 7 : 6)">
+                            <OfficeDeviceExpansion Device="device" OnViewCharts="HandleViewCharts" />
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DeviceInfo> Devices { get; set; } = [];
+    [Parameter] public int? ExpandedDeviceId { get; set; }
+    [Parameter] public EventCallback<int> OnToggle { get; set; }
+    [Parameter] public bool ShowAdminActions { get; set; }
+    [Parameter] public EventCallback<DeviceInfo> OnEditDevice { get; set; }
+    [Parameter] public EventCallback<int> OnDeleteDevice { get; set; }
+    [Parameter] public EventCallback<int> OnViewDeviceCharts { get; set; }
+
+    private Task HandleViewCharts(int deviceId) => OnViewDeviceCharts.InvokeAsync(deviceId);
+
+    private static bool HasSnmp(DeviceInfo d)
+        => !string.IsNullOrEmpty(d.SysUpTime) && d.SysUpTime != "Brak danych";
+
+    private static string StatusIcon(string? status) => status switch
+    {
+        "Online" => "bi-check-circle",
+        "Limited" => "bi-exclamation-circle",
+        "Offline" => "bi-x-circle",
+        _ => "bi-question-circle"
+    };
+}
