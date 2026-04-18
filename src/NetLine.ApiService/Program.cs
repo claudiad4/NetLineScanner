@@ -16,6 +16,7 @@ using NetLine.Infrastructure.Services.Monitoring.Components;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 using NetLine.Infrastructure;
 using NetLine.Infrastructure.Identity;
+using NetLine.Infrastructure.Services.Monitoring.Components.CPU;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();

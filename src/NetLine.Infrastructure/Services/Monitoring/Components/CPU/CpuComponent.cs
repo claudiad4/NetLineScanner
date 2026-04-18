@@ -3,7 +3,7 @@ using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.CPU;
 /// </summary>
 public sealed class CpuComponent : IMonitoringComponent
 {
