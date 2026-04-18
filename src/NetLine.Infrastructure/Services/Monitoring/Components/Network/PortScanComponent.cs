@@ -4,7 +4,7 @@ using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.Network;
 
 /// <summary>
 /// TCP connect scan against a small curated list of management and service ports.

@@ -4,7 +4,7 @@ using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.Network;
 
 /// <summary>
 /// Sends a burst of ICMP echo requests and reports RTT, jitter, packet loss and

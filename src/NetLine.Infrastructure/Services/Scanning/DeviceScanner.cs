@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Application.Interfaces.Scanning;
@@ -7,32 +8,30 @@ using NetLine.Domain.Models;
 namespace NetLine.Infrastructure.Services.Scanning;
 
 /// <summary>
-/// Iterates all registered <see cref="IMonitoringComponent"/>s against every device in parallel.
-/// Produces a <see cref="DeviceScanResult"/> enriched with legacy ping/SNMP fields derived from
-/// the Ping and System components so the API shape stays backward compatible.
+/// Nowoczesny silnik skanuj¹cy. 
+/// Równolegle uruchamia wszystkie komponenty monitoruj¹ce i zwraca czyst¹ listê metryk.
+/// Zlikwidowano wsteczn¹ kompatybilnoœæ z SNMPScanResult.
 /// </summary>
 public class DeviceScanner : IDeviceScanner
 {
     private readonly IReadOnlyList<IMonitoringComponent> _components;
     private readonly ILogger<DeviceScanner> _logger;
 
-    public DeviceScanner(
-        IEnumerable<IMonitoringComponent> components,
-        ILogger<DeviceScanner> logger)
+    public DeviceScanner(IEnumerable<IMonitoringComponent> components, ILogger<DeviceScanner> logger)
     {
         _components = components.ToList();
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<DeviceScanResult>> ScanDevicesAsync(
+    public async Task<IReadOnlyList<ModernDeviceScanResult>> ScanDevicesAsync(
         IEnumerable<DeviceInfo> devices,
         CancellationToken cancellationToken)
     {
-        var deviceList = devices.ToList();
-        var scanResults = new List<DeviceScanResult>();
+        // 1. Zmiana: U¿ywamy bezpiecznej dla w¹tków kolekcji ConcurrentBag zamiast standardowej listy i blokad (lock)
+        var scanResults = new ConcurrentBag<DeviceScanResult>();
 
         await Parallel.ForEachAsync(
-            deviceList,
+            devices,
             new ParallelOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -41,15 +40,12 @@ public class DeviceScanner : IDeviceScanner
             async (device, ct) =>
             {
                 var componentResults = await RunComponentsAsync(device, ct);
-                var result = BuildScanResult(device, componentResults);
 
-                lock (scanResults)
-                {
-                    scanResults.Add(result);
-                }
+                // 2. Zmiana: Od razu wrzucamy wynik do worka, bez rêcznego budowania starych struktur
+                scanResults.Add(new ModernDeviceScanResult(device.Id, device.IpAddress, componentResults));
             });
 
-        return scanResults.AsReadOnly();
+        return scanResults.ToList().AsReadOnly();
     }
 
     private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(DeviceInfo device, CancellationToken ct)
@@ -69,51 +65,18 @@ public class DeviceScanner : IDeviceScanner
 
         return await Task.WhenAll(tasks);
     }
+}
 
-    private static DeviceScanResult BuildScanResult(DeviceInfo device, IReadOnlyList<ComponentResult> componentResults)
-    {
-        var pingMs = ExtractPingRtt(componentResults);
-        var snmp = ExtractLegacySnmp(componentResults);
+// 3. Zmiana: Definiujemy nowy, ultralekki obiekt wymiany danych u¿ywaj¹c C# Records
+public record ModernDeviceScanResult(
+    int DeviceId,
+    string IpAddress,
+    IReadOnlyList<ComponentResult> ComponentResults
+)
+{
+    // Opcjonalny pomocnik: "sp³aszcza" wszystkie metryki ze wszystkich komponentów do jednej listy
+    public IEnumerable<ComponentMetric> AllMetrics => ComponentResults.SelectMany(c => c.Metrics);
 
-        return new DeviceScanResult(
-            device.Id,
-            device.IpAddress,
-            pingMs,
-            snmp,
-            componentResults);
-    }
-
-    private static long? ExtractPingRtt(IReadOnlyList<ComponentResult> results)
-    {
-        var pingResult = results.FirstOrDefault(r => r.ComponentName == "Ping");
-        if (pingResult is null || !pingResult.Success) return null;
-
-        var avg = pingResult.Metrics.FirstOrDefault(m => m.Key == "ping.rtt_avg_ms");
-        return avg?.NumericValue is double v ? (long)Math.Round(v) : null;
-    }
-
-    private static SNMPScanResult ExtractLegacySnmp(IReadOnlyList<ComponentResult> results)
-    {
-        var sys = results.FirstOrDefault(r => r.ComponentName == "System");
-        if (sys is null || !sys.Success)
-        {
-            return new SNMPScanResult { Success = false, ErrorMessage = sys?.ErrorMessage ?? "System component missing" };
-        }
-
-        string? Text(string key) => sys.Metrics.FirstOrDefault(m => m.Key == key)?.TextValue;
-
-        var ifCount = results.FirstOrDefault(r => r.ComponentName == "NetworkInterface")
-            ?.Metrics.FirstOrDefault(m => m.Key == "net.if.total")?.NumericValue;
-
-        return new SNMPScanResult
-        {
-            Success = true,
-            Description = Text("system.descr"),
-            Name = Text("system.name"),
-            Location = Text("system.location"),
-            Contact = Text("system.contact"),
-            UpTime = Text("system.uptime"),
-            InterfacesCount = ifCount.HasValue ? (int)ifCount.Value : null
-        };
-    }
+    // Opcjonalny pomocnik: szybko sprawdza czy jakikolwiek skaner zanotowa³ sukces
+    public bool IsOnline => ComponentResults.Any(c => c.Success);
 }

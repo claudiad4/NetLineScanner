@@ -1,17 +1,26 @@
+using NetLine.Domain.Entities;
+
 namespace NetLine.Domain.Models;
 
 /// <summary>
-/// Aggregate scan outcome for one device collected in a monitoring cycle.
-/// Holds legacy ping/SNMP fields for API back-compat plus a list of
-/// per-component results produced by <see cref="NetLine.Application.Interfaces.Monitoring.IMonitoringComponent"/>.
+/// Nowoczesny, niemutowalny obiekt przechowuj¹cy wynik skanowania urz¹dzenia.
+/// Zawiera wy³¹cznie listê rezultatów z poszczególnych wtyczek (komponentów).
 /// </summary>
-public sealed record DeviceScanResult(
+public record DeviceScanResult(
     int DeviceId,
     string IpAddress,
-    long? PingResponseTimeMs,
-    SNMPScanResult SnmpData,
-    IReadOnlyList<ComponentResult> ComponentResults)
+    IReadOnlyList<ComponentResult> ComponentResults
+)
 {
-    public DeviceScanResult(int deviceId, string ipAddress, long? pingResponseTimeMs, SNMPScanResult snmpData)
-        : this(deviceId, ipAddress, pingResponseTimeMs, snmpData, Array.Empty<ComponentResult>()) { }
+    /// <summary>
+    /// Pomocnicza w³aœciwoœæ: Sp³aszcza wszystkie metryki ze wszystkich komponentów do jednej, p³askiej listy.
+    /// Idealne do szybkiego zapisu w bazie danych!
+    /// </summary>
+    public IEnumerable<ComponentMetric> AllMetrics => ComponentResults.SelectMany(c => c.Metrics);
+
+    /// <summary>
+    /// Pomocnicza w³aœciwoœæ: Jeœli jakikolwiek komponent odniós³ sukces (np. Ping, Skaner Portów, SNMP),
+    /// uznajemy, ¿e urz¹dzenie "¿yje" w sieci.
+    /// </summary>
+    public bool IsOnline => ComponentResults.Any(c => c.Success);
 }

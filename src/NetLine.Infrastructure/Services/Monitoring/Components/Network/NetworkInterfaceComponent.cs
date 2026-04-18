@@ -5,7 +5,7 @@ using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.Network;
 /// </summary>
 public sealed class NetworkInterfaceComponent : IMonitoringComponent
 {
@@ -112,7 +112,7 @@ public sealed class NetworkInterfaceComponent : IMonitoringComponent
     private static double DeltaPerSecond(long previous, long current, double seconds)
     {
         var delta = current >= previous ? current - previous : current; // counter wrap → start over
-        return Math.Round((delta * 8.0) / seconds, 2); // bits per second
+        return Math.Round(delta * 8.0 / seconds, 2); // bits per second
     }
 
     private static string MapIfStatus(int v) => v switch

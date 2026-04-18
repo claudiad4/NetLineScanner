@@ -5,7 +5,7 @@ using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.Network;
 
 /// <summary>
 /// Performs a reverse DNS lookup of the device's IP and records the

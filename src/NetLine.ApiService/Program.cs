@@ -12,11 +12,14 @@ using NetLine.Application.Interfaces.Devices;
 using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
 using NetLine.Infrastructure.Services.Monitoring;
-using NetLine.Infrastructure.Services.Monitoring.Components;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 using NetLine.Infrastructure;
 using NetLine.Infrastructure.Identity;
 using NetLine.Infrastructure.Services.Monitoring.Components.CPU;
+using NetLine.Infrastructure.Services.Monitoring.Components.Memory;
+using NetLine.Infrastructure.Services.Monitoring.Components.Network;
+using NetLine.Infrastructure.Services.Monitoring.Components.System;
+using NetLine.Infrastructure.Services.Monitoring.Components.Component;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();

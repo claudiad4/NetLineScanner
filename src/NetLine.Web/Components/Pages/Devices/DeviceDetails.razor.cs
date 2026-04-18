@@ -37,7 +37,6 @@ namespace NetLine.Web.Components.Pages.Devices
             new(nameof(MonitoringCategory.Network), "Sieć", "bi-diagram-3"),
             new(nameof(MonitoringCategory.Component), "Komponenty", "bi-hdd-stack"),
             new(nameof(MonitoringCategory.Health), "Stan", "bi-heart-pulse"),
-            new(nameof(MonitoringCategory.Power), "Zasilanie", "bi-plug"),
             new(nameof(MonitoringCategory.Raw), "Surowe", "bi-braces"),
             new("alerts", "Alerty", "bi-bell", alerts.Count),
         };

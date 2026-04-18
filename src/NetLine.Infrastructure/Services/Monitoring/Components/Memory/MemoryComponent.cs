@@ -4,7 +4,7 @@ using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 
-namespace NetLine.Infrastructure.Services.Monitoring.Components;
+namespace NetLine.Infrastructure.Services.Monitoring.Components.Memory;
 /// </summary>
 public sealed class MemoryComponent : IMonitoringComponent
 {
