@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NetLine.Infrastructure;
@@ -11,6 +12,7 @@ public static class UserEndpoints
     public static void MapUserEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/users")
+            .RequireAuthorization(new AuthorizeAttribute { Roles = IdentitySeeder.AdminRole })
             .WithOpenApi();
 
         group.MapPost("/", async (

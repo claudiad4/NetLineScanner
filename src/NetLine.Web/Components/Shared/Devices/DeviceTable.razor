@@ -1,0 +1,80 @@
+@using NetLine.Domain.Entities
+@using NetLine.Web.Components.Pages.Devices
+
+<div class="table-responsive shadow-sm rounded">
+    <table class="table align-middle bg-white table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 40px;"></th>
+                <th style="width: 130px;">Status</th>
+                <th style="width: 140px;">Protocol</th>
+                <th>Device</th>
+                <th>IP address</th>
+                <th>Last scanned</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in Devices)
+            {
+                <tr @onclick="() => OnToggle.InvokeAsync(device.Id)">
+                    <td class="text-center">
+                        <i class="bi @(ExpandedDeviceId == device.Id ? "bi-chevron-down text-purple" : "bi-chevron-right text-muted")"></i>
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill @DeviceIcons.GetStatusClass(device.Status) w-100 shadow-sm">
+                            <i class="bi @StatusIcon(device.Status)"></i> @device.Status
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <span class="badge @(device.PingResponseTimeMs.HasValue ? "bg-soft-success" : "bg-soft-danger") badge-tech">ICMP</span>
+                            <span class="badge @(HasSnmp(device) ? "bg-soft-success" : "bg-soft-danger") badge-tech">SNMP</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 40px; height: 40px; background-color: #e9ecef; color: black;">
+                                <i class="bi @DeviceIcons.GetIconForType(device.DeviceType)" style="font-size: 1.2rem;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">@device.UserDefinedName</div>
+                                <small class="text-muted d-block" style="margin-top: -4px;">
+                                    <i class="bi bi-tag"></i> @device.DeviceType
+                                </small>
+                            </div>
+                        </div>
+                    </td>
+                    <td><code class="text-purple fw-bold">@device.IpAddress</code></td>
+                    <td><small class="text-muted">@device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</small></td>
+                </tr>
+
+                @if (ExpandedDeviceId == device.Id)
+                {
+                    <tr class="detail-row">
+                        <td colspan="6">
+                            <DeviceDetailsExpansion Device="device" />
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DeviceInfo> Devices { get; set; } = [];
+    [Parameter] public int? ExpandedDeviceId { get; set; }
+    [Parameter] public EventCallback<int> OnToggle { get; set; }
+
+    private static bool HasSnmp(DeviceInfo d)
+        => !string.IsNullOrEmpty(d.SysUpTime) && d.SysUpTime != "No data";
+
+    private static string StatusIcon(string? status) => status switch
+    {
+        "Online" => "bi-check-circle",
+        "Limited" => "bi-exclamation-circle",
+        "Offline" => "bi-x-circle",
+        _ => "bi-question-circle"
+    };
+}

@@ -1,6 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NetLine.Application.Interfaces.Devices;
-using NetLine.Application.Interfaces.Monitoring;
+using NetLine.Application.Interfaces.Scanning;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Data;
@@ -10,14 +10,12 @@ namespace NetLine.ApiService.Services;
 public class DeviceManager : IDeviceManager
 {
     private readonly AppDbContext _db;
-    private readonly ISNMPService _snmp;
-    private readonly IICMPService _ping;
+    private readonly IDeviceScanner _scanner;
 
-    public DeviceManager(AppDbContext db, ISNMPService snmp, IICMPService ping)
+    public DeviceManager(AppDbContext db, IDeviceScanner scanner)
     {
         _db = db;
-        _snmp = snmp;
-        _ping = ping;
+        _scanner = scanner;
     }
 
     public async Task<IEnumerable<DeviceInfo>> GetAllAsync()
@@ -25,10 +23,13 @@ public class DeviceManager : IDeviceManager
 
     public async Task<DeviceScanResult> ScanAsync(string ip)
     {
-        var pingMs = await _ping.GetPingResponseTimeAsync(ip);
-        var snmpResult = await _snmp.GetDeviceInfoAsync(ip);
-
-        return new DeviceScanResult(0, ip, pingMs, snmpResult);
+        var ephemeral = new DeviceInfo
+        {
+            IpAddress = ip,
+            UserDefinedName = ip,
+            DeviceType = "Other"
+        };
+        return await _scanner.ScanDeviceAsync(ephemeral, CancellationToken.None);
     }
 
     public async Task<DeviceInfo> AddAsync(AddDeviceRequest request)
@@ -37,42 +38,50 @@ public class DeviceManager : IDeviceManager
         if (exists)
             throw new InvalidOperationException("This IP is already in the database.");
 
+        var device = new DeviceInfo
+        {
+            IpAddress = request.Ip,
+            UserDefinedName = request.UserLabel,
+            DeviceType = request.Type,
+            OfficeId = request.OfficeId,
+            Status = "Offline",
+            LastScanned = DateTime.UtcNow
+        };
+
         try
         {
-            var pingMs = await _ping.GetPingResponseTimeAsync(request.Ip);
-            var snmpScan = await _snmp.GetDeviceInfoAsync(request.Ip);
-
-            var status = pingMs.HasValue
-                ? (snmpScan.Success ? "Online" : "Limited")
-                : "Offline";
-
-            var device = new DeviceInfo
-            {
-                IpAddress = request.Ip,
-                UserDefinedName = request.UserLabel,
-                DeviceType = request.Type,
-                OfficeId = request.OfficeId,
-                Status = status,
-                PingResponseTimeMs = pingMs,
-                SysName = snmpScan.Name,
-                SysDescr = snmpScan.Description,
-                SysLocation = snmpScan.Location,
-                SysContact = snmpScan.Contact,
-                SysUpTime = snmpScan.UpTime,
-                SysInterfacesCount = snmpScan.InterfacesCount,
-                LastScanned = DateTime.UtcNow
-            };
-
-            _db.DevicesInfo.Add(device);
-            await _db.SaveChangesAsync();
-
-            return device;
+            var scan = await _scanner.ScanDeviceAsync(device, CancellationToken.None);
+            ApplyInitialSnapshot(device, scan);
         }
-        catch (Exception ex) when (ex is not InvalidOperationException)
+        catch (Exception ex)
         {
             throw new InvalidOperationException(
-                $"Failed to add device at {request.Ip}. The device may not be reachable or SNMP may not be enabled. Details: {ex.Message}",
-                ex);
+                $"Failed to scan device at {request.Ip}: {ex.Message}", ex);
         }
+
+        _db.DevicesInfo.Add(device);
+        await _db.SaveChangesAsync();
+        return device;
+    }
+
+    private static void ApplyInitialSnapshot(DeviceInfo device, DeviceScanResult scan)
+    {
+        var metrics = scan.AllMetrics.ToList();
+
+        var pingReachable = metrics.FirstOrDefault(m => m.Key == "ping.reachable")?.TextValue == "true";
+        var rtt = metrics.FirstOrDefault(m => m.Key == "ping.rtt_avg_ms")?.NumericValue;
+        var systemOk = scan.ComponentResults.Any(c => c.ComponentName == "System" && c.Success);
+
+        device.PingResponseTimeMs = pingReachable && rtt.HasValue ? (long?)Math.Round(rtt.Value) : null;
+        device.Status = pingReachable
+            ? (systemOk ? "Online" : "Limited")
+            : "Offline";
+
+        device.SysName = metrics.FirstOrDefault(m => m.Key == "system.name")?.TextValue;
+        device.SysDescr = metrics.FirstOrDefault(m => m.Key == "system.descr")?.TextValue;
+        device.SysLocation = metrics.FirstOrDefault(m => m.Key == "system.location")?.TextValue;
+        device.SysContact = metrics.FirstOrDefault(m => m.Key == "system.contact")?.TextValue;
+        device.SysUpTime = metrics.FirstOrDefault(m => m.Key == "system.uptime")?.TextValue;
+        device.LastScanned = DateTime.UtcNow;
     }
 }

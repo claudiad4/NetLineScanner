@@ -8,9 +8,8 @@ using NetLine.Domain.Models;
 namespace NetLine.Infrastructure.Services.Scanning;
 
 /// <summary>
-/// Nowoczesny silnik skanuj¹cy. 
-/// Równolegle uruchamia wszystkie komponenty monitoruj¹ce i zwraca czyst¹ listê metryk.
-/// Zlikwidowano wsteczn¹ kompatybilnoœæ z SNMPScanResult.
+/// Runs every registered <see cref="IMonitoringComponent"/> in parallel for each
+/// device and returns the collected metrics as a flat <see cref="DeviceScanResult"/>.
 /// </summary>
 public class DeviceScanner : IDeviceScanner
 {
@@ -23,11 +22,10 @@ public class DeviceScanner : IDeviceScanner
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<ModernDeviceScanResult>> ScanDevicesAsync(
+    public async Task<IReadOnlyList<DeviceScanResult>> ScanDevicesAsync(
         IEnumerable<DeviceInfo> devices,
         CancellationToken cancellationToken)
     {
-        // 1. Zmiana: U¿ywamy bezpiecznej dla w¹tków kolekcji ConcurrentBag zamiast standardowej listy i blokad (lock)
         var scanResults = new ConcurrentBag<DeviceScanResult>();
 
         await Parallel.ForEachAsync(
@@ -40,12 +38,16 @@ public class DeviceScanner : IDeviceScanner
             async (device, ct) =>
             {
                 var componentResults = await RunComponentsAsync(device, ct);
-
-                // 2. Zmiana: Od razu wrzucamy wynik do worka, bez rêcznego budowania starych struktur
-                scanResults.Add(new ModernDeviceScanResult(device.Id, device.IpAddress, componentResults));
+                scanResults.Add(new DeviceScanResult(device.Id, device.IpAddress, componentResults));
             });
 
         return scanResults.ToList().AsReadOnly();
+    }
+
+    public async Task<DeviceScanResult> ScanDeviceAsync(DeviceInfo device, CancellationToken cancellationToken)
+    {
+        var componentResults = await RunComponentsAsync(device, cancellationToken);
+        return new DeviceScanResult(device.Id, device.IpAddress, componentResults);
     }
 
     private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(DeviceInfo device, CancellationToken ct)
@@ -65,18 +67,4 @@ public class DeviceScanner : IDeviceScanner
 
         return await Task.WhenAll(tasks);
     }
-}
-
-// 3. Zmiana: Definiujemy nowy, ultralekki obiekt wymiany danych u¿ywaj¹c C# Records
-public record ModernDeviceScanResult(
-    int DeviceId,
-    string IpAddress,
-    IReadOnlyList<ComponentResult> ComponentResults
-)
-{
-    // Opcjonalny pomocnik: "sp³aszcza" wszystkie metryki ze wszystkich komponentów do jednej listy
-    public IEnumerable<ComponentMetric> AllMetrics => ComponentResults.SelectMany(c => c.Metrics);
-
-    // Opcjonalny pomocnik: szybko sprawdza czy jakikolwiek skaner zanotowa³ sukces
-    public bool IsOnline => ComponentResults.Any(c => c.Success);
 }
