@@ -1,0 +1,60 @@
+@using NetLine.Domain.Entities
+
+<div class="card p-4 mb-4 shadow-sm office-edit-form">
+    <h5 class="mb-3">Edytuj biuro</h5>
+    <div class="mb-3">
+        <label class="form-label fw-bold">Nazwa</label>
+        <input @bind="name" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-bold">Lokalizacja</label>
+        <input @bind="location" class="form-control" />
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary w-100 office-edit-form__save" @onclick="HandleSave">Zapisz</button>
+        <button class="btn btn-outline-secondary w-100" @onclick="HandleCancel">Anuluj</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Office Office { get; set; } = default!;
+    [Parameter] public EventCallback<(string Name, string? Location)> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string name = "";
+    private string? location;
+    private string? errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        name = Office.Name;
+        location = Office.Location;
+        errorMessage = null;
+    }
+
+    public void SetError(string? message)
+    {
+        errorMessage = message;
+        StateHasChanged();
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            errorMessage = "Nazwa jest wymagana.";
+            return;
+        }
+        await OnSave.InvokeAsync((name, location));
+    }
+
+    private Task HandleCancel()
+    {
+        errorMessage = null;
+        return OnCancel.InvokeAsync();
+    }
+}

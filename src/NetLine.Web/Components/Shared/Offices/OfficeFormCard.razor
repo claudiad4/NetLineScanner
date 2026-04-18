@@ -1,0 +1,70 @@
+@using NetLine.Domain.Entities
+
+<div class="card p-4 mb-4 shadow-sm office-form">
+    <h5 class="mb-3">@(IsEditing ? "Edytuj biuro" : "Nowe biuro")</h5>
+    <div class="mb-3">
+        <label class="form-label fw-bold">Nazwa biura</label>
+        <input @bind="name" class="form-control" placeholder="np. Biuro Warszawa" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-bold">Lokalizacja (opcjonalnie)</label>
+        <input @bind="location" class="form-control" placeholder="np. ul. Marszałkowska 1" />
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary w-100 office-form__save" @onclick="HandleSave" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+                <span> Zapisywanie...</span>
+            }
+            else
+            {
+                <span>@(IsEditing ? "Zapisz" : "Dodaj")</span>
+            }
+        </button>
+        <button class="btn btn-outline-secondary w-100" @onclick="OnCancel">Anuluj</button>
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public Office? EditingOffice { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<OfficeFormData> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    public record OfficeFormData(string Name, string? Location);
+
+    private string name = "";
+    private string? location;
+    private string? errorMessage;
+
+    public bool IsEditing => EditingOffice is not null;
+
+    protected override void OnParametersSet()
+    {
+        name = EditingOffice?.Name ?? "";
+        location = EditingOffice?.Location;
+        errorMessage = null;
+    }
+
+    public void SetError(string? message)
+    {
+        errorMessage = message;
+        StateHasChanged();
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            errorMessage = "Nazwa biura jest wymagana.";
+            return;
+        }
+        errorMessage = null;
+        await OnSave.InvokeAsync(new OfficeFormData(name, location));
+    }
+}

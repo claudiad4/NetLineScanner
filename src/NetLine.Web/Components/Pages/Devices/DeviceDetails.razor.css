@@ -1,0 +1,36 @@
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.device-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+}
+
+.device-tabs .nav-link:hover {
+    color: #6f42c1;
+    border-bottom-color: #d6c4ea;
+}
+
+.device-tabs .nav-link.active {
+    color: #6f42c1;
+    background: transparent;
+    border-bottom-color: #6f42c1;
+}
+
+.sys-key {
+    width: 30%;
+}
+
+.alerts-scroll {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.new-badge {
+    height: 20px;
+}

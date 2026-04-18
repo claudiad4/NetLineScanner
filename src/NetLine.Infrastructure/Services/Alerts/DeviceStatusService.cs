@@ -233,7 +233,7 @@ public class DeviceStatusService : IDeviceStatusService
             var systemOk = scan.ComponentResults.Any(c => c.ComponentName == "System" && c.Success);
 
             int? ifCount = null;
-            var ifMetric = metrics.FirstOrDefault(m => m.Key == "sys.interfaces_count" || m.Key == "net.if.count");
+            var ifMetric = metrics.FirstOrDefault(m => m.Key == "net.if.total");
             if (ifMetric?.NumericValue is double v) ifCount = (int)Math.Round(v);
 
             return new ScanSnapshot(

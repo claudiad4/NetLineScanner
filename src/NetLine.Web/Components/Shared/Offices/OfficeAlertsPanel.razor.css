@@ -1,0 +1,31 @@
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.office-alerts-body {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    border-left: 4px solid;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.alert-item.offline {
+    border-left-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+.alert-item.online {
+    border-left-color: #28a745;
+    background-color: #f7fff7;
+}
+
+.alert-item__new-badge {
+    height: 20px;
+}

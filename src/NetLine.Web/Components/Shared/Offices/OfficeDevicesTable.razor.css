@@ -1,0 +1,61 @@
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.bg-soft-success {
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+    border: 1px solid #badbcc !important;
+}
+
+.bg-soft-danger {
+    background-color: #f8d7da !important;
+    color: #842029 !important;
+    border: 1px solid #f5c2c7 !important;
+}
+
+.badge-tech {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    font-weight: bold;
+    min-width: 55px;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.col-chevron { width: 40px; }
+.col-status { width: 130px; }
+.col-protocol { width: 140px; }
+.col-actions { width: 100px; }
+
+.device-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #e9ecef;
+}
+
+.device-icon-glyph {
+    font-size: 1.2rem;
+}
+
+.table-hover tbody tr:not(.detail-row):hover {
+    background-color: rgba(111, 66, 193, 0.05);
+    cursor: pointer;
+}
+
+.detail-row {
+    background-color: #f8faff;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

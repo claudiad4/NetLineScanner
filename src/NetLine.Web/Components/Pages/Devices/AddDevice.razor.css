@@ -1,0 +1,57 @@
+.custom-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.toast-icon {
+    font-size: 1.2rem;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+::deep input[type=number]::-webkit-inner-spin-button,
+::deep input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.page-container {
+    min-height: 80vh;
+    padding: 20px;
+}
+
+.form-card {
+    width: 100%;
+    max-width: 500px;
+}
+
+.ip-octet {
+    width: 70px;
+}
+
+.submit-btn {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}

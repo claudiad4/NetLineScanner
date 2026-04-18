@@ -1,0 +1,111 @@
+@using NetLine.Domain.Entities
+
+<div class="table-responsive shadow-sm rounded">
+    <table class="table align-middle bg-white table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>E-mail</th>
+                <th>Imię i nazwisko</th>
+                <th class="col-role">Rola</th>
+                <th class="col-office">Biuro</th>
+                <th class="col-actions"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in Users)
+            {
+                <tr>
+                    <td>@u.Email</td>
+                    <td>@($"{u.FirstName} {u.LastName}".Trim())</td>
+                    <td>
+                        @if (IsEditing(u.Id))
+                        {
+                            <select class="form-select form-select-sm" @bind="editRole">
+                                <option value="User">User</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <span class="badge @(u.Role == "Admin" ? "bg-danger" : "bg-secondary")">@u.Role</span>
+                        }
+                    </td>
+                    <td>
+                        @if (IsEditing(u.Id))
+                        {
+                            <select class="form-select form-select-sm" @bind="editOfficeId">
+                                <option value="">— Brak —</option>
+                                @if (Offices is not null)
+                                {
+                                    @foreach (var o in Offices)
+                                    {
+                                        <option value="@o.Id">@o.Name</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            var office = Offices?.FirstOrDefault(o => o.Id == u.OfficeId);
+                            @(office?.Name ?? "—")
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            @if (IsEditing(u.Id))
+                            {
+                                <button class="btn btn-sm btn-primary users-table__save" @onclick="() => HandleSave(u.Id)">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(u)" disabled="@(u.Id == CurrentUserId)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => OnDelete.InvokeAsync(u.Id)" disabled="@(u.Id == CurrentUserId)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ManagedUser> Users { get; set; } = [];
+    [Parameter] public IReadOnlyList<Office>? Offices { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public EventCallback<UserUpdate> OnSave { get; set; }
+    [Parameter] public EventCallback<string> OnDelete { get; set; }
+
+    public record UserUpdate(string UserId, int? OfficeId, string Role);
+
+    private string? editingUserId;
+    private string editRole = "User";
+    private string editOfficeId = "";
+
+    private bool IsEditing(string id) => editingUserId == id;
+
+    private void StartEdit(ManagedUser u)
+    {
+        editingUserId = u.Id;
+        editRole = string.IsNullOrWhiteSpace(u.Role) ? "User" : u.Role;
+        editOfficeId = u.OfficeId?.ToString() ?? "";
+    }
+
+    private void CancelEdit() => editingUserId = null;
+
+    private async Task HandleSave(string id)
+    {
+        int? officeId = int.TryParse(editOfficeId, out var o) ? o : null;
+        editingUserId = null;
+        await OnSave.InvokeAsync(new UserUpdate(id, officeId, editRole));
+    }
+}

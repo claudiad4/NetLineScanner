@@ -64,7 +64,7 @@ public class DeviceMonitorService : BackgroundService
                     {
                         alert.Id,
                         alert.DeviceInfoId,
-                        Type = alert.Type.ToString(),
+                        Type = (int)alert.Type,
                         alert.Message,
                         alert.Timestamp,
                         alert.IsRead,

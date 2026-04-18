@@ -1,40 +1,15 @@
 @page "/alerts"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using NetLine.Web.Services
-@using NetLine.Domain.Entities
-@using Microsoft.AspNetCore.SignalR.Client
 @rendermode InteractiveServer
-@inject AlertApiClient ApiClient
-@inject CurrentUserService CurrentUser
-@inject IConfiguration Config
 @implements IAsyncDisposable
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-<PageTitle>Alerty Urz�dze�</PageTitle>
-
-<style>
-    .text-purple { color: #6f42c1 !important; }
-    .alert-card { border-left: 5px solid; transition: all 0.3s ease; margin-bottom: 12px; }
-    .alert-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .alert-offline { border-left-color: #dc3545; background-color: #fff5f5; }
-    .alert-online { border-left-color: #28a745; background-color: #f5fff5; }
-    .alert-icon { font-size: 1.5rem; display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border-radius: 50%; color: white; }
-    .alert-offline .alert-icon { background-color: #dc3545; }
-    .alert-online .alert-icon { background-color: #28a745; }
-    .alert-time { font-size: 0.85rem; color: #6c757d; }
-    .badge-unread { animation: pulse 2s infinite; }
-    @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    .filter-btn { transition: all 0.2s ease; }
-    .filter-btn.active { background-color: #6f42c1 !important; color: white !important; }
-    .empty-state { text-align: center; padding: 60px 20px; }
-    .empty-state-icon { font-size: 3rem; color: #dee2e6; margin-bottom: 20px; }
-    .error-banner { background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; }
-</style>
+<PageTitle>Alerty Urządzeń</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-bell text-purple"></i> Alerty</h1>
-    @if (alerts != null)
+    @if (alerts is not null)
     {
         <span class="badge @(alerts.Any(a => !a.IsRead) ? "bg-danger badge-unread" : "bg-secondary") border shadow-sm p-2">
             @if (alerts.Any(a => !a.IsRead))
@@ -49,45 +24,30 @@
     }
 </div>
 
-@if (errorMessage != null)
+@if (errorMessage is not null)
 {
     <div class="error-banner">
-        <i class="bi bi-exclamation-triangle-fill"></i> <strong>B��d:</strong> @errorMessage
+        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Błąd:</strong> @errorMessage
         <button class="btn btn-sm btn-outline-danger ms-2" @onclick="ClearError">
             <i class="bi bi-x"></i>
         </button>
     </div>
 }
 
-@if (alerts == null)
+@if (alerts is null)
 {
     <div class="text-center mt-5">
         <div class="spinner-border text-purple" role="status"></div>
-        <p class="mt-2 text-muted">�adowanie alert�w...</p>
+        <p class="mt-2 text-muted">Ładowanie alertów...</p>
     </div>
 }
 else
 {
-    <div class="mb-4 d-flex gap-2 flex-wrap">
-        <button class="btn btn-outline-secondary filter-btn @(selectedFilter == null ? "active" : "")" 
-                @onclick="() => SetFilter(null)"
-                disabled="@isLoading">
-            <i class="bi bi-funnel"></i> Wszystkie (@alerts.Count)
-        </button>
-        <button class="btn btn-outline-secondary filter-btn @(selectedFilter == AlertType.WentOffline ? "active" : "")" 
-                @onclick="() => SetFilter(AlertType.WentOffline)"
-                disabled="@isLoading">
-            <i class="bi bi-x-circle text-danger"></i> Offline (@alerts.Count(a => a.Type == AlertType.WentOffline))
-        </button>
-        <button class="btn btn-outline-secondary filter-btn @(selectedFilter == AlertType.CameOnline ? "active" : "")" 
-                @onclick="() => SetFilter(AlertType.CameOnline)"
-                disabled="@isLoading">
-            <i class="bi bi-check-circle text-success"></i> Online (@alerts.Count(a => a.Type == AlertType.CameOnline))
-        </button>
-        <button class="btn btn-outline-secondary ms-auto" @onclick="MarkAllAsRead" disabled="@(isLoading || !alerts.Any(a => !a.IsRead))">
-            <i class="bi bi-check2-all"></i> Oznacz wszystkie jako przeczytane
-        </button>
-    </div>
+    <AlertsFilterBar Alerts="alerts"
+                     SelectedFilter="selectedFilter"
+                     IsLoading="isLoading"
+                     OnFilterChanged="SetFilter"
+                     OnMarkAllRead="MarkAllAsRead" />
 
     @if (filteredAlerts.Any())
     {
@@ -95,70 +55,15 @@ else
             <div class="col-lg-8">
                 @foreach (var alert in filteredAlerts.OrderByDescending(a => a.Timestamp))
                 {
-                    var isOffline = alert.Type == AlertType.WentOffline;
-                    <div class="card alert-card @(isOffline ? "alert-offline" : "alert-online")">
-                        <div class="card-body">
-                            <div class="d-flex gap-3">
-                                <div class="alert-icon">
-                                    <i class="bi @(isOffline ? "bi-x-circle" : "bi-check-circle")"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="card-title mb-1">@alert.Message</h6>
-                                            <p class="card-text small text-muted mb-0">
-                                                <i class="bi bi-clock"></i> <span class="alert-time">@alert.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</span>
-                                            </p>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            @if (!alert.IsRead)
-                                            {
-                                                <button class="btn btn-sm btn-outline-primary" 
-                                                        @onclick="() => MarkAsRead(alert.Id)"
-                                                        disabled="@isLoading"
-                                                        title="Oznacz jako przeczytane">
-                                                    <i class="bi bi-check2"></i>
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-light text-muted">Przeczytane</span>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <AlertCard Alert="alert"
+                               IsLoading="isLoading"
+                               OnMarkRead="MarkAsRead" />
                 }
             </div>
             <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-light">
-                        <h6 class="mb-0"><i class="bi bi-graph-up text-purple"></i> Statystyki</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-6 border-end">
-                                <p class="text-muted small mb-1">Offline</p>
-                                <p class="h5 text-danger mb-0">@alerts.Count(a => a.Type == AlertType.WentOffline)</p>
-                            </div>
-                            <div class="col-6">
-                                <p class="text-muted small mb-1">Online</p>
-                                <p class="h5 text-success mb-0">@alerts.Count(a => a.Type == AlertType.CameOnline)</p>
-                            </div>
-                        </div>
-                        <hr />
-                        <div class="text-center">
-                            <p class="text-muted small mb-1">Nieprzeczytane</p>
-                            <p class="h5 text-purple mb-0">@alerts.Count(a => !a.IsRead)</p>
-                        </div>
-                        <hr />
-                        <button class="btn btn-sm btn-outline-danger w-100" @onclick="ClearAllAlerts" disabled="@(isLoading || !alerts.Any())">
-                            <i class="bi bi-trash"></i> Wyczy�� wszystkie
-                        </button>
-                    </div>
-                </div>
+                <AlertStatsPanel Alerts="alerts"
+                                 IsLoading="isLoading"
+                                 OnClearAll="ClearAllAlerts" />
             </div>
         </div>
     }
@@ -168,225 +73,11 @@ else
             <div class="empty-state-icon">
                 <i class="bi @(selectedFilter == null ? "bi-inbox" : "bi-check-circle")"></i>
             </div>
-            <h5 class="text-muted">@(selectedFilter == null ? "Brak alert�w" : "Brak alert�w w tym filtrze")</h5>
-            @if(selectedFilter == null) { <p class="text-muted small">Wszystkie urz�dzenia dzia�aj� prawid�owo</p> }
+            <h5 class="text-muted">@(selectedFilter == null ? "Brak alertów" : "Brak alertów w tym filtrze")</h5>
+            @if (selectedFilter == null)
+            {
+                <p class="text-muted small">Wszystkie urządzenia działają prawidłowo</p>
+            }
         </div>
-    }
-}
-
-@code {
-    private List<DeviceAlert>? alerts;
-    private HubConnection? hubConnection;
-    private AlertType? selectedFilter;
-    private string? errorMessage;
-    private bool isLoading;
-    private CurrentUserInfo? user;
-    private bool isAdmin;
-    private int? scopedOfficeId;
-
-    private IEnumerable<DeviceAlert> filteredAlerts => 
-        selectedFilter == null 
-            ? (alerts ?? [])
-            : (alerts?.Where(a => a.Type == selectedFilter) ?? []);
-
-    private void SetFilter(AlertType? type)
-    {
-        selectedFilter = type;
-        StateHasChanged();
-    }
-
-    private void ClearError()
-    {
-        errorMessage = null;
-        StateHasChanged();
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        user = await CurrentUser.GetAsync();
-        isAdmin = user?.IsAdmin == true;
-        scopedOfficeId = isAdmin ? null : user?.OfficeId;
-
-        await LoadAlerts();
-        await InitializeSignalR();
-    }
-
-    private async Task InitializeSignalR()
-    {
-        try
-        {
-            var apiBaseUrl = Config["services:apiservice:http:0"] ?? Config["services:apiservice:https:0"];
-            if (string.IsNullOrEmpty(apiBaseUrl))
-            {
-                Console.WriteLine("Warning: API service URL not configured");
-                return;
-            }
-
-            hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{apiBaseUrl}/devicehub")
-                .WithAutomaticReconnect(new[]
-                {
-                    TimeSpan.FromSeconds(1),
-                    TimeSpan.FromSeconds(3),
-                    TimeSpan.FromSeconds(5),
-                    TimeSpan.FromSeconds(10)
-                })
-                .Build();
-
-            hubConnection.On("DeviceStatusUpdated", async () =>
-            {
-                Console.WriteLine("DeviceStatusUpdated received - refreshing alerts");
-                await LoadAlerts();
-            });
-
-            hubConnection.Closed += async (error) =>
-            {
-                if (error != null)
-                {
-                    Console.WriteLine($"SignalR connection closed with error: {error.Message}");
-                    errorMessage = "Utracona po��czenie z serwerem. Pr�ba ponownego po��czenia...";
-                    await InvokeAsync(StateHasChanged);
-                }
-                await Task.Delay(5000);
-                try
-                {
-                    await hubConnection.StartAsync();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to reconnect: {ex.Message}");
-                }
-            };
-
-            await hubConnection.StartAsync();
-            Console.WriteLine("SignalR connection established");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"SignalR initialization error: {ex.Message}");
-            errorMessage = $"Nie mo�na po��czy� si� z serwerem czasu rzeczywistego: {ex.Message}";
-        }
-    }
-
-    private async Task LoadAlerts()
-    {
-        try
-        {
-            isLoading = true;
-            if (!isAdmin && scopedOfficeId is null)
-            {
-                alerts = [];
-                errorMessage = null;
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-            alerts = await ApiClient.GetAlertsAsync(officeId: scopedOfficeId);
-            errorMessage = null;
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (HttpRequestException ex)
-        {
-            errorMessage = $"B��d po��czenia: {ex.Message}";
-            Console.WriteLine($"HTTP error loading alerts: {ex}");
-            alerts = [];
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"B��d �adowania alert�w: {ex.Message}";
-            Console.WriteLine($"Error loading alerts: {ex}");
-            alerts = [];
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task MarkAsRead(int alertId)
-    {
-        try
-        {
-            isLoading = true;
-            var success = await ApiClient.MarkAlertAsReadAsync(alertId);
-            if (success)
-            {
-                await LoadAlerts();
-            }
-            else
-            {
-                errorMessage = "Nie uda�o si� oznaczy� alertu jako przeczytany";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"B��d przy oznaczaniu alertu: {ex.Message}";
-            Console.WriteLine($"Error marking alert as read: {ex}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task MarkAllAsRead()
-    {
-        try
-        {
-            isLoading = true;
-            var success = await ApiClient.MarkAllAlertsAsReadAsync(scopedOfficeId);
-            if (success)
-            {
-                await LoadAlerts();
-            }
-            else
-            {
-                errorMessage = "Nie uda�o si� oznaczy� wszystkich alert�w jako przeczytane";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"B��d przy oznaczaniu alert�w: {ex.Message}";
-            Console.WriteLine($"Error marking all alerts as read: {ex}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task ClearAllAlerts()
-    {
-        try
-        {
-            isLoading = true;
-            var success = await ApiClient.ClearAllAlertsAsync(scopedOfficeId);
-            if (success)
-            {
-                await LoadAlerts();
-            }
-            else
-            {
-                errorMessage = "Nie uda�o si� wyczy�ci� alert�w";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"B��d przy czyszczeniu alert�w: {ex.Message}";
-            Console.WriteLine($"Error clearing alerts: {ex}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
     }
 }
