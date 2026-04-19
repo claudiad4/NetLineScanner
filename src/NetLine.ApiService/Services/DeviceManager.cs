@@ -11,11 +11,13 @@ public class DeviceManager : IDeviceManager
 {
     private readonly AppDbContext _db;
     private readonly IDeviceScanner _scanner;
+    private readonly IScanningPolicy _scanningPolicy;
 
-    public DeviceManager(AppDbContext db, IDeviceScanner scanner)
+    public DeviceManager(AppDbContext db, IDeviceScanner scanner, IScanningPolicy scanningPolicy)
     {
         _db = db;
         _scanner = scanner;
+        _scanningPolicy = scanningPolicy;
     }
 
     public async Task<IEnumerable<DeviceInfo>> GetAllAsync()
@@ -61,6 +63,9 @@ public class DeviceManager : IDeviceManager
 
         _db.DevicesInfo.Add(device);
         await _db.SaveChangesAsync();
+
+        _scanningPolicy.MarkAllRan(device.Id, DateTime.UtcNow);
+
         return device;
     }
 

@@ -41,6 +41,7 @@ public class DeviceMonitorService : BackgroundService
                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var deviceScanner = scope.ServiceProvider.GetRequiredService<IDeviceScanner>();
                 var statusService = scope.ServiceProvider.GetRequiredService<IDeviceStatusService>();
+                var scanningPolicy = scope.ServiceProvider.GetRequiredService<IScanningPolicy>();
 
                 var devices = await dbContext.DevicesInfo.ToListAsync(stoppingToken);
 
@@ -51,8 +52,31 @@ public class DeviceMonitorService : BackgroundService
                     continue;
                 }
 
-                var scanResults = await deviceScanner.ScanDevicesAsync(devices, stoppingToken);
-                var newAlerts = await statusService.ProcessScanResultsAsync(devices, scanResults, stoppingToken);
+                var now = DateTime.UtcNow;
+                var workItems = devices
+                    .Select(d => (Device: d, Components: scanningPolicy.GetDueComponents(d, now)))
+                    .Where(w => w.Components.Count > 0)
+                    .ToList();
+
+                if (workItems.Count == 0)
+                {
+                    _logger.LogDebug("No components due this tick.");
+                    await Task.Delay(_checkInterval, stoppingToken);
+                    continue;
+                }
+
+                var scanResults = await deviceScanner.ScanDevicesAsync(workItems, stoppingToken);
+
+                foreach (var (device, components) in workItems)
+                {
+                    foreach (var component in components)
+                    {
+                        scanningPolicy.MarkRan(device.Id, component.Name, now);
+                    }
+                }
+
+                var scannedDevices = workItems.Select(w => w.Device).ToList();
+                var newAlerts = await statusService.ProcessScanResultsAsync(scannedDevices, scanResults, stoppingToken);
 
                 await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", cancellationToken: stoppingToken);
 
