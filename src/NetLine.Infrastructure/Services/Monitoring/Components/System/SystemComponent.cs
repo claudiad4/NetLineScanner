@@ -3,6 +3,8 @@ using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace NetLine.Infrastructure.Services.Monitoring.Components.System;
 /// </summary>
@@ -75,7 +77,7 @@ public sealed class SystemComponent : IMonitoringComponent
 
     private static void TryAddLoad(List<ComponentMetric> metrics, string key, string? raw, string label)
     {
-        if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value))
+        if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
         {
             metrics.Add(ComponentMetric.Numeric(key, value, "load", label));
         }
@@ -97,7 +99,7 @@ public sealed class SystemComponent : IMonitoringComponent
 
     private static string? ExtractVersion(string sysDescr)
     {
-        var match = System.Text.RegularExpressions.Regex.Match(sysDescr, @"\d+(\.\d+){1,3}");
+        var match = Regex.Match(sysDescr, @"\d+(\.\d+){1,3}");
         return match.Success ? match.Value : null;
     }
 }
