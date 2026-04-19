@@ -37,7 +37,7 @@ public class DeviceScanner : IDeviceScanner
             },
             async (device, ct) =>
             {
-                var componentResults = await RunComponentsAsync(device, ct);
+                var componentResults = await RunComponentsAsync(device, _components, ct);
                 scanResults.Add(new DeviceScanResult(device.Id, device.IpAddress, componentResults));
             });
 
@@ -46,13 +46,38 @@ public class DeviceScanner : IDeviceScanner
 
     public async Task<DeviceScanResult> ScanDeviceAsync(DeviceInfo device, CancellationToken cancellationToken)
     {
-        var componentResults = await RunComponentsAsync(device, cancellationToken);
+        var componentResults = await RunComponentsAsync(device, _components, cancellationToken);
         return new DeviceScanResult(device.Id, device.IpAddress, componentResults);
     }
 
-    private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(DeviceInfo device, CancellationToken ct)
+    public async Task<IReadOnlyList<DeviceScanResult>> ScanDevicesAsync(
+        IEnumerable<(DeviceInfo Device, IReadOnlyList<IMonitoringComponent> Components)> workItems,
+        CancellationToken cancellationToken)
     {
-        var tasks = _components.Select(async c =>
+        var scanResults = new ConcurrentBag<DeviceScanResult>();
+
+        await Parallel.ForEachAsync(
+            workItems,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = cancellationToken
+            },
+            async (item, ct) =>
+            {
+                var componentResults = await RunComponentsAsync(item.Device, item.Components, ct);
+                scanResults.Add(new DeviceScanResult(item.Device.Id, item.Device.IpAddress, componentResults));
+            });
+
+        return scanResults.ToList().AsReadOnly();
+    }
+
+    private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(
+        DeviceInfo device,
+        IReadOnlyList<IMonitoringComponent> components,
+        CancellationToken ct)
+    {
+        var tasks = components.Select(async c =>
         {
             try
             {

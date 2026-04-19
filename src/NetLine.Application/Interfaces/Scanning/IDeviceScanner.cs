@@ -1,3 +1,4 @@
+using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
@@ -14,5 +15,12 @@ public interface IDeviceScanner
 
     Task<DeviceScanResult> ScanDeviceAsync(
         DeviceInfo device,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs only the pre-filtered components for each device. Used by the tiered scheduler.
+    /// </summary>
+    Task<IReadOnlyList<DeviceScanResult>> ScanDevicesAsync(
+        IEnumerable<(DeviceInfo Device, IReadOnlyList<IMonitoringComponent> Components)> workItems,
         CancellationToken cancellationToken);
 }

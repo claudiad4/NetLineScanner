@@ -47,10 +47,13 @@ public class DeviceStatusService : IDeviceStatusService
             var snapshot = ScanSnapshot.From(scanResult);
 
             var oldStatus = device.Status;
-            var newStatus = DetermineStatus(snapshot);
+            var newStatus = DetermineStatus(snapshot, oldStatus);
 
             device.LastScanned = DateTime.UtcNow;
-            device.PingResponseTimeMs = snapshot.PingResponseTimeMs;
+            if (snapshot.PingRan)
+            {
+                device.PingResponseTimeMs = snapshot.PingResponseTimeMs;
+            }
             device.Status = newStatus;
             UpdateSnmpSnapshot(device, newStatus, snapshot);
 
@@ -90,11 +93,23 @@ public class DeviceStatusService : IDeviceStatusService
         }
     }
 
-    private static string DetermineStatus(ScanSnapshot snapshot)
+    private static string DetermineStatus(ScanSnapshot snapshot, string previousStatus)
     {
-        if (snapshot.PingReachable && snapshot.SystemOk) return "Online";
-        if (snapshot.PingReachable) return "Limited";
-        return "Offline";
+        // If Ping didn't run this tick, preserve the last known status.
+        if (!snapshot.PingRan) return previousStatus;
+
+        if (!snapshot.PingReachable) return "Offline";
+
+        // Ping reached. If System didn't run, we can't freshly evaluate SNMP —
+        // preserve prior status if it was already "Online"/"Limited", else default to "Online".
+        if (!snapshot.SystemRan)
+        {
+            return previousStatus == "Online" || previousStatus == "Limited"
+                ? previousStatus
+                : "Online";
+        }
+
+        return snapshot.SystemOk ? "Online" : "Limited";
     }
 
     private DeviceAlert AddStatusChangeAlert(DeviceInfo device, string newStatus)
@@ -188,7 +203,8 @@ public class DeviceStatusService : IDeviceStatusService
 
     private static void UpdateSnmpSnapshot(DeviceInfo device, string newStatus, ScanSnapshot snapshot)
     {
-        if (newStatus == "Online" && snapshot.SystemOk)
+        // Only refresh SNMP fields when the System component actually participated in this tick.
+        if (snapshot.SystemRan && newStatus == "Online" && snapshot.SystemOk)
         {
             device.SysName = snapshot.SysName;
             device.SysDescr = snapshot.SysDescr;
@@ -207,7 +223,7 @@ public class DeviceStatusService : IDeviceStatusService
             device.SysUpTime = null;
             device.SysInterfacesCount = null;
         }
-        // "Limited": keep last snapshot
+        // "Limited" or Online-without-System: keep last snapshot
     }
 
     /// <summary>
@@ -215,8 +231,10 @@ public class DeviceStatusService : IDeviceStatusService
     /// component results, so the rest of the class doesn't have to re-walk them.
     /// </summary>
     private readonly record struct ScanSnapshot(
+        bool PingRan,
         bool PingReachable,
         long? PingResponseTimeMs,
+        bool SystemRan,
         bool SystemOk,
         string? SysName,
         string? SysDescr,
@@ -228,8 +246,10 @@ public class DeviceStatusService : IDeviceStatusService
         public static ScanSnapshot From(DeviceScanResult scan)
         {
             var metrics = scan.AllMetrics.ToList();
+            var pingRan = scan.ComponentResults.Any(c => c.ComponentName == "Ping");
             var pingReachable = metrics.FirstOrDefault(m => m.Key == "ping.reachable")?.TextValue == "true";
             var rtt = metrics.FirstOrDefault(m => m.Key == "ping.rtt_avg_ms")?.NumericValue;
+            var systemRan = scan.ComponentResults.Any(c => c.ComponentName == "System");
             var systemOk = scan.ComponentResults.Any(c => c.ComponentName == "System" && c.Success);
 
             int? ifCount = null;
@@ -237,8 +257,10 @@ public class DeviceStatusService : IDeviceStatusService
             if (ifMetric?.NumericValue is double v) ifCount = (int)Math.Round(v);
 
             return new ScanSnapshot(
+                PingRan: pingRan,
                 PingReachable: pingReachable,
                 PingResponseTimeMs: pingReachable && rtt.HasValue ? (long?)Math.Round(rtt.Value) : null,
+                SystemRan: systemRan,
                 SystemOk: systemOk,
                 SysName: metrics.FirstOrDefault(m => m.Key == "system.name")?.TextValue,
                 SysDescr: metrics.FirstOrDefault(m => m.Key == "system.descr")?.TextValue,
