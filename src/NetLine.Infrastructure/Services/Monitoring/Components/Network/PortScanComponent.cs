@@ -42,6 +42,7 @@ public sealed class PortScanComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Network;
     public string Name => "PortScan";
+    public ScanFrequency Frequency => ScanFrequency.Heavy;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {

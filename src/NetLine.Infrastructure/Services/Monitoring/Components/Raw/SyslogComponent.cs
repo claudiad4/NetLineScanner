@@ -22,6 +22,7 @@ public sealed class SyslogComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Raw;
     public string Name => "Syslog";
+    public ScanFrequency Frequency => ScanFrequency.Medium;
 
     public Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {

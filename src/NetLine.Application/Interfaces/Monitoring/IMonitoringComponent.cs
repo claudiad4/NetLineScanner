@@ -13,5 +13,7 @@ public interface IMonitoringComponent
 
     string Name { get; }
 
+    ScanFrequency Frequency { get; }
+
     Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken);
 }

@@ -8,8 +8,10 @@ using NetLine.Domain.Models;
 namespace NetLine.Infrastructure.Services.Scanning;
 
 /// <summary>
-/// Runs every registered <see cref="IMonitoringComponent"/> in parallel for each
-/// device and returns the collected metrics as a flat <see cref="DeviceScanResult"/>.
+/// Runs registered <see cref="IMonitoringComponent"/>s for each device, but only
+/// the ones whose tier (<see cref="ScanFrequency"/>) is due. Tier timestamps on
+/// <see cref="DeviceInfo"/> are stamped after a successful run so the caller's
+/// tracked DbContext can persist them with SaveChanges.
 /// </summary>
 public class DeviceScanner : IDeviceScanner
 {
@@ -52,7 +54,25 @@ public class DeviceScanner : IDeviceScanner
 
     private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(DeviceInfo device, CancellationToken ct)
     {
-        var tasks = _components.Select(async c =>
+        var now = DateTime.UtcNow;
+        var dueTiers = GetDueTiers(device, now);
+
+        if (dueTiers.Count == 0)
+        {
+            return Array.Empty<ComponentResult>();
+        }
+
+        var componentsToRun = _components.Where(c => dueTiers.Contains(c.Frequency)).ToList();
+        if (componentsToRun.Count == 0)
+        {
+            return Array.Empty<ComponentResult>();
+        }
+
+        _logger.LogDebug(
+            "device {DeviceId} due tiers: {Tiers}, running {ComponentCount} component(s)",
+            device.Id, string.Join(",", dueTiers), componentsToRun.Count);
+
+        var tasks = componentsToRun.Select(async c =>
         {
             try
             {
@@ -65,6 +85,30 @@ public class DeviceScanner : IDeviceScanner
             }
         });
 
-        return await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks);
+
+        StampTimestamps(device, dueTiers, now);
+
+        return results;
+    }
+
+    private static HashSet<ScanFrequency> GetDueTiers(DeviceInfo device, DateTime now)
+    {
+        var due = new HashSet<ScanFrequency>();
+        if (IsDue(device.LastLightScanAt, ScanIntervals.Light, now)) due.Add(ScanFrequency.Light);
+        if (IsDue(device.LastMediumScanAt, ScanIntervals.Medium, now)) due.Add(ScanFrequency.Medium);
+        if (IsDue(device.LastHeavyScanAt, ScanIntervals.Heavy, now)) due.Add(ScanFrequency.Heavy);
+        return due;
+    }
+
+    private static bool IsDue(DateTime? lastScan, TimeSpan interval, DateTime now)
+        => lastScan is null || now - lastScan.Value >= interval;
+
+    private static void StampTimestamps(DeviceInfo device, HashSet<ScanFrequency> executed, DateTime now)
+    {
+        if (executed.Contains(ScanFrequency.Light)) device.LastLightScanAt = now;
+        if (executed.Contains(ScanFrequency.Medium)) device.LastMediumScanAt = now;
+        if (executed.Contains(ScanFrequency.Heavy)) device.LastHeavyScanAt = now;
+        device.LastScanned = now;
     }
 }

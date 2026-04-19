@@ -18,6 +18,7 @@ public sealed class MemoryComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Memory;
     public string Name => "Memory";
+    public ScanFrequency Frequency => ScanFrequency.Medium;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {

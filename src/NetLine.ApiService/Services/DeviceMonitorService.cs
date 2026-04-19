@@ -17,7 +17,7 @@ public class DeviceMonitorService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DeviceMonitorService> _logger;
     private readonly IHubContext<DeviceHub> _hubContext;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
+    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(30);
 
     public DeviceMonitorService(
         IServiceProvider serviceProvider,
@@ -54,7 +54,13 @@ public class DeviceMonitorService : BackgroundService
                 var scanResults = await deviceScanner.ScanDevicesAsync(devices, stoppingToken);
                 var newAlerts = await statusService.ProcessScanResultsAsync(devices, scanResults, stoppingToken);
 
-                await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", cancellationToken: stoppingToken);
+                await dbContext.SaveChangesAsync(stoppingToken);
+
+                var anyTierRan = scanResults.Any(r => r.ComponentResults.Count > 0);
+                if (anyTierRan)
+                {
+                    await _hubContext.Clients.All.SendAsync("DeviceStatusUpdated", cancellationToken: stoppingToken);
+                }
 
                 var devicesById = devices.ToDictionary(d => d.Id);
                 foreach (var alert in newAlerts)

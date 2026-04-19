@@ -23,6 +23,7 @@ public sealed class DnsComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Network;
     public string Name => "Dns";
+    public ScanFrequency Frequency => ScanFrequency.Medium;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {
