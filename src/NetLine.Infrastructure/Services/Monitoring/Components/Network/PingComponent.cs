@@ -55,22 +55,13 @@ public sealed class PingComponent : IMonitoringComponent
         var lossPct = (double)failed / ProbeCount * 100.0;
         var metrics = new List<ComponentMetric>
         {
-            ComponentMetric.Numeric("ping.probes", ProbeCount, "count", "Probes sent"),
             ComponentMetric.Numeric("ping.failed", failed, "count", "Failed probes"),
             ComponentMetric.Numeric("ping.loss_pct", Math.Round(lossPct, 2), "%", "Packet loss")
         };
 
         if (rtts.Count > 0)
         {
-            var avg = rtts.Average();
-            metrics.Add(ComponentMetric.Numeric("ping.rtt_avg_ms", Math.Round(avg, 2), "ms", "Avg RTT"));
-            metrics.Add(ComponentMetric.Numeric("ping.rtt_min_ms", rtts.Min(), "ms", "Min RTT"));
-            metrics.Add(ComponentMetric.Numeric("ping.rtt_max_ms", rtts.Max(), "ms", "Max RTT"));
-            if (rtts.Count > 1)
-            {
-                var jitter = rtts.Zip(rtts.Skip(1), (a, b) => Math.Abs(b - a)).Average();
-                metrics.Add(ComponentMetric.Numeric("ping.jitter_ms", Math.Round(jitter, 2), "ms", "Jitter"));
-            }
+            metrics.Add(ComponentMetric.Numeric("ping.rtt_avg_ms", Math.Round(rtts.Average(), 2), "ms", "Avg RTT"));
             metrics.Add(ComponentMetric.Text("ping.reachable", "true"));
         }
         else

@@ -54,7 +54,6 @@ public sealed class MemoryComponent : IMonitoringComponent
 
         metrics.Add(ComponentMetric.Numeric("memory.total_mb", Math.Round(totalMb, 2), "MB", "Total RAM"));
         metrics.Add(ComponentMetric.Numeric("memory.free_mb", Math.Round(freeMb, 2), "MB", "Free RAM"));
-        metrics.Add(ComponentMetric.Numeric("memory.used_mb", Math.Round(usedMb, 2), "MB", "Used RAM"));
         metrics.Add(ComponentMetric.Numeric("memory.usage_pct", Math.Round(usagePct, 2), "%", "Usage %"));
 
         _logger.LogDebug("Memory component collected {Count} metrics for {Device}", metrics.Count, device.IpAddress);

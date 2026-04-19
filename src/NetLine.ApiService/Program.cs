@@ -16,7 +16,9 @@ using NetLine.Infrastructure.Identity;
 using NetLine.Infrastructure.Services.Monitoring.Components.CPU;
 using NetLine.Infrastructure.Services.Monitoring.Components.Memory;
 using NetLine.Infrastructure.Services.Monitoring.Components.Network;
+using NetLine.Infrastructure.Services.Monitoring.Components.Raw;
 using NetLine.Infrastructure.Services.Monitoring.Components.System;
+using NetLine.Infrastructure.Services.Monitoring.Syslog;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -40,6 +42,11 @@ builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 builder.Services.Configure<SnmpOptions>(builder.Configuration.GetSection(SnmpOptions.SectionName));
 builder.Services.AddSingleton<ISnmpClient, SnmpClient>();
 
+// Syslog receiver — defaults (UDP/514) used when no "Syslog" section is present
+builder.Services.AddOptions<SyslogOptions>();
+builder.Services.AddSingleton<ISyslogBuffer, SyslogBuffer>();
+builder.Services.AddHostedService<SyslogReceiver>();
+
 // Monitoring components — ordered to match the user-facing taxonomy
 builder.Services.AddSingleton<IMonitoringComponent, SystemComponent>();
 builder.Services.AddSingleton<IMonitoringComponent, CpuComponent>();
@@ -48,6 +55,7 @@ builder.Services.AddSingleton<IMonitoringComponent, NetworkInterfaceComponent>()
 builder.Services.AddSingleton<IMonitoringComponent, PingComponent>();
 builder.Services.AddSingleton<IMonitoringComponent, PortScanComponent>();
 builder.Services.AddSingleton<IMonitoringComponent, DnsComponent>();
+builder.Services.AddSingleton<IMonitoringComponent, SyslogComponent>();
 
 // Scanning + status orchestration
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
