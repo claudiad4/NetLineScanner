@@ -9,12 +9,13 @@ using NetLine.Web.Components.Shared.Devices;
 
 namespace NetLine.Web.Components.Pages.Devices
 {
-    public partial class DeviceDetails : ComponentBase
+    public partial class DeviceDetails : ComponentBase, IAsyncDisposable
     {
         [Inject] protected DeviceApiClient ApiClient { get; set; } = default!;
         [Inject] protected AlertApiClient AlertClient { get; set; } = default!;
         [Inject] protected CurrentUserService CurrentUser { get; set; } = default!;
         [Inject] protected NavigationManager Nav { get; set; } = default!;
+        [Inject] protected DeviceHubClient Hub { get; set; } = default!;
 
         [Parameter] public int Id { get; set; }
 
@@ -51,6 +52,17 @@ namespace NetLine.Web.Components.Pages.Devices
             user = await CurrentUser.GetAsync();
             isAdmin = user?.IsAdmin == true;
 
+            await LoadAsync();
+
+            if (accessDenied) return;
+
+            Hub.OnDeviceStatusUpdated += HandleStatusUpdated;
+            Hub.OnAlertCreated += HandleAlertCreated;
+            await Hub.StartAsync();
+        }
+
+        private async Task LoadAsync()
+        {
             try
             {
                 device = await ApiClient.GetDeviceAsync(Id);
@@ -71,6 +83,26 @@ namespace NetLine.Web.Components.Pages.Devices
             {
                 Console.WriteLine($"ERROR: {ex.Message}");
             }
+        }
+
+        private async Task HandleStatusUpdated()
+        {
+            await LoadAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private Task HandleAlertCreated(DeviceAlert alert)
+        {
+            if (alert.DeviceInfoId != Id) return Task.CompletedTask;
+            alerts.Insert(0, alert);
+            return InvokeAsync(StateHasChanged);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Hub.OnDeviceStatusUpdated -= HandleStatusUpdated;
+            Hub.OnAlertCreated -= HandleAlertCreated;
+            return ValueTask.CompletedTask;
         }
 
         protected void GoBack()
