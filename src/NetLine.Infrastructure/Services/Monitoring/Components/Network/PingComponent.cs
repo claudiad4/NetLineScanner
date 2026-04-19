@@ -24,6 +24,7 @@ public sealed class PingComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Network;
     public string Name => "Ping";
+    public ScanFrequency Frequency => ScanFrequency.Light;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {

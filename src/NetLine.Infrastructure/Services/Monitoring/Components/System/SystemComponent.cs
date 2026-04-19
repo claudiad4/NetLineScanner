@@ -20,6 +20,7 @@ public sealed class SystemComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.System;
     public string Name => "System";
+    public ScanFrequency Frequency => ScanFrequency.Medium;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {

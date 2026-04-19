@@ -30,6 +30,25 @@ public class DeviceInfo
 
     public DateTime LastScanned { get; set; } = DateTime.UtcNow;
 
+    public DateTime? LastLightScanAt { get; set; }
+    public DateTime? LastMediumScanAt { get; set; }
+    public DateTime? LastHeavyScanAt { get; set; }
+
+    [NotMapped]
+    public DateTime? NextScanAt
+    {
+        get
+        {
+            var next = new[]
+            {
+                LastLightScanAt is null ? (DateTime?)null : LastLightScanAt.Value + ScanIntervals.Light,
+                LastMediumScanAt is null ? (DateTime?)null : LastMediumScanAt.Value + ScanIntervals.Medium,
+                LastHeavyScanAt is null ? (DateTime?)null : LastHeavyScanAt.Value + ScanIntervals.Heavy,
+            };
+            return next.Any(n => n is null) ? DateTime.UtcNow : next.Min();
+        }
+    }
+
     public int? OfficeId { get; set; }
     public Office Office { get; set; } = default!;
 }

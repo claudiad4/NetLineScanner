@@ -17,6 +17,7 @@ public sealed class CpuComponent : IMonitoringComponent
 
     public MonitoringCategory Category => MonitoringCategory.Cpu;
     public string Name => "CPU";
+    public ScanFrequency Frequency => ScanFrequency.Medium;
 
     public async Task<ComponentResult> CollectAsync(DeviceInfo device, CancellationToken cancellationToken)
     {
