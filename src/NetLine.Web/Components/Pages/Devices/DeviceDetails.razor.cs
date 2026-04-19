@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using NetLine.Web.Services;
 using NetLine.Domain.Entities;
+using NetLine.Web.Components.Shared.Devices;
 
 namespace NetLine.Web.Components.Pages.Devices
 {
@@ -26,6 +27,7 @@ namespace NetLine.Web.Components.Pages.Devices
         protected bool isAdmin;
         protected bool accessDenied;
         protected string activeTab = "system";
+        protected NetworkSubCategory selectedNetworkSub = NetworkSubCategory.All;
 
         protected record TabDefinition(string Key, string Label, string Icon, int? Badge = null);
 

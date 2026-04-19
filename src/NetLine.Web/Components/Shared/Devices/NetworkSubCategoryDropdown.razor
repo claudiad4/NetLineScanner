@@ -1,0 +1,26 @@
+@using NetLine.Domain.Entities
+
+<div class="mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-funnel text-muted"></i>
+    <label class="text-muted small mb-0" for="net-sub-filter">Filtr:</label>
+    <select id="net-sub-filter"
+            class="form-select form-select-sm w-auto"
+            @bind="Selected" @bind:after="NotifyChanged">
+        <option value="@NetworkSubCategory.All">Wszystkie (@Count(NetworkSubCategory.All))</option>
+        <option value="@NetworkSubCategory.Ping">Ping / Dostępność (@Count(NetworkSubCategory.Ping))</option>
+        <option value="@NetworkSubCategory.Dns">DNS (@Count(NetworkSubCategory.Dns))</option>
+        <option value="@NetworkSubCategory.Ports">Porty (@Count(NetworkSubCategory.Ports))</option>
+        <option value="@NetworkSubCategory.Interfaces">Interfejsy (@Count(NetworkSubCategory.Interfaces))</option>
+    </select>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DeviceMetric> Metrics { get; set; } = [];
+    [Parameter] public NetworkSubCategory Selected { get; set; } = NetworkSubCategory.All;
+    [Parameter] public EventCallback<NetworkSubCategory> SelectedChanged { get; set; }
+
+    private int Count(NetworkSubCategory sub)
+        => Metrics.Count(m => NetworkSubCategoryFilter.Matches(m.MetricKey, sub));
+
+    private Task NotifyChanged() => SelectedChanged.InvokeAsync(Selected);
+}

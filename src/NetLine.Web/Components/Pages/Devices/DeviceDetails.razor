@@ -133,7 +133,22 @@ else
                 {
                     var category = Enum.TryParse<MonitoringCategory>(activeTab, true, out var parsed) ? (MonitoringCategory?)parsed : null;
                     var categoryMetrics = category.HasValue ? MetricsFor(category.Value) : new List<DeviceMetric>();
-                    <DeviceMetricsTable Metrics="categoryMetrics" NoDataText="@NoDataText" />
+
+                    if (category == MonitoringCategory.Network && categoryMetrics.Count > 0)
+                    {
+                        <NetworkSubCategoryDropdown Metrics="categoryMetrics"
+                                                    @bind-Selected="selectedNetworkSub" />
+                        var filtered = categoryMetrics
+                            .Where(m => NetworkSubCategoryFilter.Matches(m.MetricKey, selectedNetworkSub))
+                            .ToList();
+                        <DeviceMetricsTable Metrics="filtered"
+                                            NoDataText="@NoDataText"
+                                            EmptyMessage="Brak metryk w wybranej podkategorii." />
+                    }
+                    else
+                    {
+                        <DeviceMetricsTable Metrics="categoryMetrics" NoDataText="@NoDataText" />
+                    }
                 }
             </div>
         </div>
