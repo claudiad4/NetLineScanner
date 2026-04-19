@@ -30,7 +30,15 @@
             <div class="card-body">
                 <small class="text-muted">Ostatni skan</small>
                 <div class="fw-bold fs-5">@Device.LastScanned.ToLocalTime().ToString("HH:mm:ss")</div>
-                <small class="text-muted">@NextScanLabel(Device)</small>
+                @{
+                    var upcoming = GetUpcomingScans(Device).ToList();
+                }
+                @for (var i = 0; i < upcoming.Count; i++)
+                {
+                    var scan = upcoming[i];
+                    var prefix = i == 0 ? "Następny skan za" : "Następnie za";
+                    <small class="text-muted d-block">@prefix @FormatDelta(scan.Delta): @scan.Components</small>
+                }
             </div>
         </div>
     </div>
@@ -39,21 +47,39 @@
 @code {
     [Parameter, EditorRequired] public DeviceInfo Device { get; set; } = default!;
 
-    private static string NextScanLabel(DeviceInfo device)
+    private static readonly (ScanFrequency Tier, string Components)[] TierComponents =
     {
-        if (device.NextScanAt is not { } next)
-        {
-            return "Następny skan: zaraz";
-        }
+        (ScanFrequency.Light, "Ping"),
+        (ScanFrequency.Medium, "DNS, CPU, RAM, interfejsy, system, syslog"),
+        (ScanFrequency.Heavy, "skan portów"),
+    };
 
-        var delta = next - DateTime.UtcNow;
-        if (delta <= TimeSpan.Zero)
-        {
-            return "Następny skan: zaraz";
-        }
+    private static IEnumerable<(TimeSpan Delta, string Components)> GetUpcomingScans(DeviceInfo device)
+    {
+        var now = DateTime.UtcNow;
+        return TierComponents
+            .Select(t => (NextAt: NextAtFor(device, t.Tier, now), t.Components))
+            .OrderBy(t => t.NextAt)
+            .Select(t => (Delta: t.NextAt - now, t.Components));
+    }
 
-        if (delta.TotalMinutes < 1) return $"Następny skan za ~{(int)delta.TotalSeconds} s";
-        if (delta.TotalHours < 1) return $"Następny skan za ~{(int)delta.TotalMinutes} min";
-        return $"Następny skan za ~{delta.TotalHours:F1} h";
+    private static DateTime NextAtFor(DeviceInfo device, ScanFrequency tier, DateTime now)
+    {
+        var (last, interval) = tier switch
+        {
+            ScanFrequency.Light => (device.LastLightScanAt, ScanIntervals.Light),
+            ScanFrequency.Medium => (device.LastMediumScanAt, ScanIntervals.Medium),
+            ScanFrequency.Heavy => (device.LastHeavyScanAt, ScanIntervals.Heavy),
+            _ => (null, TimeSpan.Zero)
+        };
+        return last is null ? now : last.Value + interval;
+    }
+
+    private static string FormatDelta(TimeSpan delta)
+    {
+        if (delta <= TimeSpan.Zero) return "~teraz";
+        if (delta.TotalMinutes < 1) return $"~{(int)delta.TotalSeconds} s";
+        if (delta.TotalHours < 1) return $"~{(int)delta.TotalMinutes} min";
+        return $"~{delta.TotalHours:F1} h";
     }
 }
