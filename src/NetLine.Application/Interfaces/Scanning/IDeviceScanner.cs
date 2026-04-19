@@ -14,5 +14,6 @@ public interface IDeviceScanner
 
     Task<DeviceScanResult> ScanDeviceAsync(
         DeviceInfo device,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool forceAllTiers = false);
 }

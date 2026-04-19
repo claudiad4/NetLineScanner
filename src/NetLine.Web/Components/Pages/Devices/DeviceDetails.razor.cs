@@ -15,6 +15,7 @@ namespace NetLine.Web.Components.Pages.Devices
         [Inject] protected AlertApiClient AlertClient { get; set; } = default!;
         [Inject] protected CurrentUserService CurrentUser { get; set; } = default!;
         [Inject] protected NavigationManager Nav { get; set; } = default!;
+        [Inject] protected AlertNotificationService AlertService { get; set; } = default!;
 
         [Parameter] public int Id { get; set; }
 
@@ -26,6 +27,7 @@ namespace NetLine.Web.Components.Pages.Devices
         protected CurrentUserInfo? user;
         protected bool isAdmin;
         protected bool accessDenied;
+        protected bool isScanning;
         protected string activeTab = "system";
         protected NetworkSubCategory selectedNetworkSub = NetworkSubCategory.All;
 
@@ -70,6 +72,29 @@ namespace NetLine.Web.Components.Pages.Devices
             catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: {ex.Message}");
+            }
+        }
+
+        protected async Task ScanNowAsync()
+        {
+            if (isScanning || device is null) return;
+            isScanning = true;
+            try
+            {
+                var ok = await ApiClient.ScanDeviceNowAsync(device.Id);
+                if (!ok) return;
+
+                device = await ApiClient.GetDeviceAsync(Id) ?? device;
+                alerts = await AlertClient.GetAlertsAsync(deviceId: Id, limit: 50);
+                metrics = await ApiClient.GetLatestMetricsAsync(Id);
+
+                AlertService.AddSuccess(
+                    "Skan zakonczony",
+                    $"Pelny skan urzadzenia {device.UserDefinedName} zakonczony sukcesem.");
+            }
+            finally
+            {
+                isScanning = false;
             }
         }
 

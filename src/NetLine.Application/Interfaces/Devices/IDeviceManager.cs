@@ -13,5 +13,6 @@ namespace NetLine.Application.Interfaces.Devices
         Task<IEnumerable<DeviceInfo>> GetAllAsync();
         Task<DeviceInfo> AddAsync(AddDeviceRequest request);
         Task<DeviceScanResult> ScanAsync(string ip);
+        Task<DeviceScanResult> ScanNowAsync(int deviceId, CancellationToken cancellationToken);
     }
 }

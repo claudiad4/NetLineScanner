@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NetLine.Application.Interfaces.Alerts;
 using NetLine.Application.Interfaces.Devices;
 using NetLine.Application.Interfaces.Scanning;
 using NetLine.Domain.Entities;
@@ -11,11 +12,13 @@ public class DeviceManager : IDeviceManager
 {
     private readonly AppDbContext _db;
     private readonly IDeviceScanner _scanner;
+    private readonly IDeviceStatusService _statusService;
 
-    public DeviceManager(AppDbContext db, IDeviceScanner scanner)
+    public DeviceManager(AppDbContext db, IDeviceScanner scanner, IDeviceStatusService statusService)
     {
         _db = db;
         _scanner = scanner;
+        _statusService = statusService;
     }
 
     public async Task<IEnumerable<DeviceInfo>> GetAllAsync()
@@ -30,6 +33,21 @@ public class DeviceManager : IDeviceManager
             DeviceType = "Other"
         };
         return await _scanner.ScanDeviceAsync(ephemeral, CancellationToken.None);
+    }
+
+    public async Task<DeviceScanResult> ScanNowAsync(int deviceId, CancellationToken cancellationToken)
+    {
+        var device = await _db.DevicesInfo.FirstOrDefaultAsync(d => d.Id == deviceId, cancellationToken)
+                     ?? throw new KeyNotFoundException($"Device {deviceId} not found.");
+
+        var result = await _scanner.ScanDeviceAsync(device, cancellationToken, forceAllTiers: true);
+
+        await _statusService.ProcessScanResultsAsync(
+            new List<DeviceInfo> { device },
+            new[] { result },
+            cancellationToken);
+
+        return result;
     }
 
     public async Task<DeviceInfo> AddAsync(AddDeviceRequest request)

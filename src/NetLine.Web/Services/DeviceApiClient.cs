@@ -64,4 +64,7 @@ public class DeviceApiClient(HttpClient httpClient)
         });
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<bool> ScanDeviceNowAsync(int id)
+        => (await httpClient.PostAsync($"api/devices/{id}/scan", null)).IsSuccessStatusCode;
 }

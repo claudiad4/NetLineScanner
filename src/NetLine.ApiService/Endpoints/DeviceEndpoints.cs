@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using NetLine.ApiService.Hubs;
 using NetLine.Application.Interfaces.Devices;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
@@ -51,6 +53,25 @@ public static class DeviceEndpoints
             return Results.Created($"/api/devices/{device.Id}", device);
         })
         .WithName("CreateNewDevice");
+
+        group.MapPost("/{id:int}/scan", async (
+                int id,
+                IDeviceManager svc,
+                IHubContext<DeviceHub> hub,
+                CancellationToken ct) =>
+        {
+            try
+            {
+                var result = await svc.ScanNowAsync(id, ct);
+                await hub.Clients.All.SendAsync("DeviceStatusUpdated", cancellationToken: ct);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound();
+            }
+        })
+        .WithName("ScanDeviceNow");
 
         group.MapDelete("/{id}", async (int id, AppDbContext db) =>
         {

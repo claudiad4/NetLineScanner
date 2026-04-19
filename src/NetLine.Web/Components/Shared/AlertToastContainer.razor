@@ -5,15 +5,19 @@
 <div class="toast-container">
     @foreach (var notification in AlertService.GetNotifications())
     {
-        <div class="alert-toast @notification.GetBgClass() @notification.GetTextClass() shadow-lg" 
+        var title = notification.Alert is null
+            ? notification.Title
+            : (notification.Alert.Type == AlertType.WentOffline ? "Device Offline" : "Device Online");
+        var body = notification.Alert?.Message ?? notification.Message;
+        <div class="alert-toast @notification.GetBgClass() @notification.GetTextClass() shadow-lg"
              role="alert">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi @notification.GetIcon()" style="font-size: 1.3rem;"></i>
                 <div class="flex-grow-1">
-                    <strong>@(notification.Alert.Type == AlertType.WentOffline ? "Device Offline" : "Device Online")</strong>
-                    <p class="mb-0 small mt-1">@notification.Alert.Message</p>
+                    <strong>@title</strong>
+                    <p class="mb-0 small mt-1">@body</p>
                 </div>
-                <button type="button" class="btn-close" 
+                <button type="button" class="btn-close"
                         @onclick="() => AlertService.RemoveNotification(notification.Id)"
                         style="filter: brightness(0) invert(1);">
                 </button>

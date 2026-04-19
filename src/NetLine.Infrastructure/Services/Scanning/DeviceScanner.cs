@@ -46,23 +46,33 @@ public class DeviceScanner : IDeviceScanner
         return scanResults.ToList().AsReadOnly();
     }
 
-    public async Task<DeviceScanResult> ScanDeviceAsync(DeviceInfo device, CancellationToken cancellationToken)
+    public async Task<DeviceScanResult> ScanDeviceAsync(
+        DeviceInfo device,
+        CancellationToken cancellationToken,
+        bool forceAllTiers = false)
     {
-        var componentResults = await RunComponentsAsync(device, cancellationToken);
+        var componentResults = await RunComponentsAsync(device, cancellationToken, forceAllTiers);
         return new DeviceScanResult(device.Id, device.IpAddress, componentResults);
     }
 
-    private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(DeviceInfo device, CancellationToken ct)
+    private async Task<IReadOnlyList<ComponentResult>> RunComponentsAsync(
+        DeviceInfo device,
+        CancellationToken ct,
+        bool forceAllTiers = false)
     {
         var now = DateTime.UtcNow;
-        var dueTiers = GetDueTiers(device, now);
+        var dueTiers = forceAllTiers
+            ? new HashSet<ScanFrequency> { ScanFrequency.Light, ScanFrequency.Medium, ScanFrequency.Heavy }
+            : GetDueTiers(device, now);
 
         if (dueTiers.Count == 0)
         {
             return Array.Empty<ComponentResult>();
         }
 
-        var componentsToRun = _components.Where(c => dueTiers.Contains(c.Frequency)).ToList();
+        var componentsToRun = forceAllTiers
+            ? _components.ToList()
+            : _components.Where(c => dueTiers.Contains(c.Frequency)).ToList();
         if (componentsToRun.Count == 0)
         {
             return Array.Empty<ComponentResult>();
