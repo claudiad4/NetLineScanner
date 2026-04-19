@@ -30,13 +30,11 @@ public sealed class NetworkInterfaceComponent : IMonitoringComponent
         }
 
         var operStatus = await _snmp.WalkAsync(device.IpAddress, OIDDictionary.IfOperStatus, cancellationToken);
-        var adminStatus = await _snmp.WalkAsync(device.IpAddress, OIDDictionary.IfAdminStatus, cancellationToken);
         var inOctets = await _snmp.WalkAsync(device.IpAddress, OIDDictionary.IfInOctets, cancellationToken);
         var outOctets = await _snmp.WalkAsync(device.IpAddress, OIDDictionary.IfOutOctets, cancellationToken);
 
         var descrByIndex = IndexByLastOid(descr);
         var operByIndex = IndexByLastOid(operStatus);
-        var adminByIndex = IndexByLastOid(adminStatus);
         var inByIndex = IndexByLastOid(inOctets);
         var outByIndex = IndexByLastOid(outOctets);
 
@@ -57,11 +55,6 @@ public sealed class NetworkInterfaceComponent : IMonitoringComponent
             {
                 metrics.Add(new ComponentMetric($"net.if.{index}.oper_status", operVal, MapIfStatus(operVal), "state", label));
                 if (operVal == 1) upCount++; else downCount++;
-            }
-
-            if (adminByIndex.TryGetValue(index, out var admin) && int.TryParse(admin.Data.ToString(), out var adminVal))
-            {
-                metrics.Add(new ComponentMetric($"net.if.{index}.admin_status", adminVal, MapIfStatus(adminVal), "state", label));
             }
 
             long? inOct = inByIndex.TryGetValue(index, out var inV) && long.TryParse(inV.Data.ToString(), out var inI) ? inI : null;
