@@ -28,6 +28,14 @@ builder.AddServiceDefaults();
 // Add DbContext with PostgreSQL
 builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
+// Thread-safe context factory for dashboard read services running parallel queries
+// (Blazor Interactive Server fan-out via Task.WhenAll). Registered alongside the
+// scoped AppDbContext so unmodified services (DeviceManager, scanners, write paths)
+// keep working unchanged.
+builder.Services.AddDbContextFactory<AppDbContext>(
+    options => options.UseNpgsql(builder.Configuration.GetConnectionString("NetLineDB")),
+    lifetime: ServiceLifetime.Scoped);
+
 // Add Identity services with roles
 builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 {
