@@ -1,5 +1,6 @@
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
+using NetLine.Application.DTO.Dashboards;
 
 namespace NetLine.Web.Services;
 
@@ -64,4 +65,7 @@ public class DeviceApiClient(HttpClient httpClient)
         });
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<DeviceDashboardDto?> GetDashboardAsync(int id)
+        => await httpClient.GetFromJsonAsync<DeviceDashboardDto>($"api/devices/{id}/dashboard");
 }

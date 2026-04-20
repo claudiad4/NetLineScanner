@@ -1,0 +1,58 @@
+@if (Dashboard is null)
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body text-muted">Ładowanie dashboardu urządzenia...</div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-semibold">Historia opóźnień (PingResponseMs)</div>
+                <div class="card-body">
+                    <ApexChart TItem="PingLatencyPointDto" Options="latencyOptions" Height="300">
+                        <ApexPointSeries TItem="PingLatencyPointDto"
+                                         Name="Ping [ms]"
+                                         Items="Dashboard.PingLatencyHistory"
+                                         SeriesType="SeriesType.Line"
+                                         XValue="@(point => point.Timestamp)"
+                                         YAggregate="@(point => point.ValueMs)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-semibold">Status obsługi alertów</div>
+                <div class="card-body">
+                    <ApexChart TItem="AlertTypeCountDto" Options="readStatusOptions" Height="300">
+                        <ApexPointSeries TItem="AlertTypeCountDto"
+                                         Name="Alerty"
+                                         Items="alertReadSeries"
+                                         SeriesType="SeriesType.Donut"
+                                         XValue="@(item => item.AlertType)"
+                                         YAggregate="@(item => item.Count)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-semibold">Typy awarii</div>
+                <div class="card-body">
+                    <ApexChart TItem="AlertTypeCountDto" Options="alertTypeOptions" Height="300">
+                        <ApexPointSeries TItem="AlertTypeCountDto"
+                                         Name="Ilość"
+                                         Items="Dashboard.AlertTypes"
+                                         SeriesType="SeriesType.Bar"
+                                         XValue="@(item => item.AlertType)"
+                                         YAggregate="@(item => item.Count)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+    </div>
+}
