@@ -12,7 +12,10 @@ public static class UserEndpoints
     public static void MapUserEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/users")
-            .RequireAuthorization(new AuthorizeAttribute { Roles = IdentitySeeder.AdminRole })
+            .RequireAuthorization(new AuthorizeAttribute
+            {
+                Roles = $"{IdentitySeeder.GlobalAdminRole},{IdentitySeeder.OfficeAdminRole}"
+            })
             .WithOpenApi();
 
         group.MapPost("/", async (
