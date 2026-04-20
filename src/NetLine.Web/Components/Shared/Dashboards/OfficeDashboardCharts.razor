@@ -17,7 +17,7 @@ else
                                          Items="Dashboard.HealthOverview"
                                          SeriesType="SeriesType.Donut"
                                          XValue="@(item => item.Status)"
-                                         YAggregate="@(item => item.Count)" />
+                                         YValue="@(item => (decimal)item.Count)" />
                     </ApexChart>
                 </div>
             </div>
@@ -33,7 +33,7 @@ else
                                          Items="Dashboard.AlertTrend"
                                          SeriesType="SeriesType.Line"
                                          XValue="@(point => point.Date.ToDateTime(TimeOnly.MinValue))"
-                                         YAggregate="@(point => point.AlertCount)" />
+                                         YValue="@(point => (decimal)point.AlertCount)" />
                     </ApexChart>
                 </div>
             </div>
@@ -49,7 +49,7 @@ else
                                          Items="Dashboard.TopFailingDevices"
                                          SeriesType="SeriesType.Bar"
                                          XValue="@(item => item.DeviceName)"
-                                         YAggregate="@(item => item.AlertCount)" />
+                                         YValue="@(item => (decimal)item.AlertCount)" />
                     </ApexChart>
                 </div>
             </div>

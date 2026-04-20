@@ -28,6 +28,23 @@ builder.AddServiceDefaults();
 // Add DbContext with PostgreSQL
 builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
+
+
+// DbContext + DbContextFactory for PostgreSQL.
+// Factory is the single source of DbContextOptions (avoids the scope-validation
+// conflict that arises when Aspire's AddNpgsqlDbContext / AddDbContextPool is
+// mixed with AddDbContextFactory). Scoped AppDbContext is produced from the
+// factory so existing services (DeviceManager, scanners, Identity, write paths)
+// keep resolving AppDbContext via DI unchanged, while dashboard services inject
+// IDbContextFactory<AppDbContext> for thread-safe parallel queries.
+var connectionString = builder.Configuration.GetConnectionString("NetLineDB");
+
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services.AddScoped<AppDbContext>(sp =>
+    sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
+
 // Add Identity services with roles
 builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
 {
