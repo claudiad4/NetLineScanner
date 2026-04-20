@@ -8,8 +8,10 @@ using NetLine.Application.Interfaces.Scanning;
 using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Application.Interfaces.Alerts;
 using NetLine.Application.Interfaces.Devices;
+using NetLine.Application.Interfaces.Dashboards;
 using NetLine.Infrastructure.Services.Scanning;
 using NetLine.Infrastructure.Services.Alerts;
+using NetLine.Infrastructure.Services.Dashboards;
 using NetLine.Infrastructure.Services.Monitoring.Snmp;
 using NetLine.Infrastructure;
 using NetLine.Infrastructure.Identity;
@@ -62,6 +64,8 @@ builder.Services.AddSingleton<IScanningPolicy, ScanningPolicy>();
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
 builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();
+builder.Services.AddScoped<IDeviceDashboardService, DeviceDashboardService>();
+builder.Services.AddScoped<IOfficeDashboardService, OfficeDashboardService>();
 builder.Services.AddHostedService<DeviceMonitorService>();
 
 // Add API services

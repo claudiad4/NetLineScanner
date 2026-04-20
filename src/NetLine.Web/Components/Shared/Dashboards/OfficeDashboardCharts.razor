@@ -1,0 +1,58 @@
+@if (Dashboard is null)
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body text-muted">Ładowanie dashboardu biura...</div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-semibold">Health overview</div>
+                <div class="card-body">
+                    <ApexChart TItem="DeviceStatusCountDto" Options="healthOptions" Height="280">
+                        <ApexPointSeries TItem="DeviceStatusCountDto"
+                                         Name="Urządzenia"
+                                         Items="Dashboard.HealthOverview"
+                                         SeriesType="SeriesType.Donut"
+                                         XValue="@(item => item.Status)"
+                                         YAggregate="@(item => item.Count)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-semibold">Trend awaryjności biura (dziennie)</div>
+                <div class="card-body">
+                    <ApexChart TItem="DailyAlertTrendPointDto" Options="trendOptions" Height="280">
+                        <ApexPointSeries TItem="DailyAlertTrendPointDto"
+                                         Name="Alerty / dzień"
+                                         Items="Dashboard.AlertTrend"
+                                         SeriesType="SeriesType.Line"
+                                         XValue="@(point => point.Date.ToDateTime(TimeOnly.MinValue))"
+                                         YAggregate="@(point => point.AlertCount)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-semibold">Top 5 awaryjnych urządzeń</div>
+                <div class="card-body">
+                    <ApexChart TItem="DeviceAlertCountDto" Options="topDevicesOptions" Height="280">
+                        <ApexPointSeries TItem="DeviceAlertCountDto"
+                                         Name="Ilość alertów"
+                                         Items="Dashboard.TopFailingDevices"
+                                         SeriesType="SeriesType.Bar"
+                                         XValue="@(item => item.DeviceName)"
+                                         YAggregate="@(item => item.AlertCount)" />
+                    </ApexChart>
+                </div>
+            </div>
+        </div>
+    </div>
+}

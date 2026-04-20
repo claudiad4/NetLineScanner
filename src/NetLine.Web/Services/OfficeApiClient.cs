@@ -1,4 +1,5 @@
 using NetLine.Domain.Entities;
+using NetLine.Application.DTO.Dashboards;
 
 namespace NetLine.Web.Services;
 
@@ -39,4 +40,7 @@ public class OfficeApiClient(HttpClient httpClient)
 
     public async Task<Office?> GetOfficeAsync(int id)
     => await httpClient.GetFromJsonAsync<Office>($"api/offices/{id}");
+
+    public async Task<OfficeDashboardDto?> GetDashboardAsync(int id)
+        => await httpClient.GetFromJsonAsync<OfficeDashboardDto>($"api/offices/{id}/dashboard");
 }
