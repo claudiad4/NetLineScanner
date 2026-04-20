@@ -12,7 +12,17 @@
     <div class="col-md-3 mb-3">
         <div class="card shadow-sm stat-card h-100">
             <div class="card-body">
-                <small class="text-muted">Ping</small>
+                <small class="text-muted">
+                    Ping
+                    <a href="/help#ping-rtt-avg-ms"
+                       target="_blank"
+                       rel="noopener"
+                       class="ms-1 text-muted text-decoration-none"
+                       title="Co to znaczy?"
+                       aria-label="Pomoc: średni czas odpowiedzi ping">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </a>
+                </small>
                 <div class="fw-bold fs-5">@(Device.PingResponseTimeMs?.ToString() ?? "---") ms</div>
             </div>
         </div>
@@ -20,7 +30,17 @@
     <div class="col-md-3 mb-3">
         <div class="card shadow-sm stat-card h-100">
             <div class="card-body">
-                <small class="text-muted">Interfejsy</small>
+                <small class="text-muted">
+                    Interfejsy
+                    <a href="/help#net-if-total"
+                       target="_blank"
+                       rel="noopener"
+                       class="ms-1 text-muted text-decoration-none"
+                       title="Co to znaczy?"
+                       aria-label="Pomoc: liczba interfejsów sieciowych">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </a>
+                </small>
                 <div class="fw-bold fs-5">@(Device.SysInterfacesCount?.ToString() ?? "---")</div>
             </div>
         </div>

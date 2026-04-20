@@ -19,7 +19,17 @@ else
             @foreach (var m in Metrics)
             {
                 <tr>
-                    <td><code>@m.MetricKey</code></td>
+                    <td>
+                        <code>@m.MetricKey</code>
+                        <a href="@HelpAnchor(m.MetricKey)"
+                           target="_blank"
+                           rel="noopener"
+                           class="ms-1 text-muted text-decoration-none"
+                           title="Co to znaczy?"
+                           aria-label="Pomoc dla metryki @m.MetricKey">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                        </a>
+                    </td>
                     <td>@(m.Label ?? "")</td>
                     <td>
                         @if (m.NumericValue.HasValue)
@@ -46,4 +56,12 @@ else
     [Parameter, EditorRequired] public IReadOnlyList<DeviceMetric> Metrics { get; set; } = [];
     [Parameter] public string NoDataText { get; set; } = "Brak danych od urządzenia";
     [Parameter] public string EmptyMessage { get; set; } = "Urządzenie nie wysłało danych w tej kategorii.";
+
+    private static string HelpAnchor(string key)
+    {
+        var parts = key.Split('.')
+            .Where(p => !int.TryParse(p, out _))
+            .Select(p => p.Replace('_', '-'));
+        return "/help#" + string.Join("-", parts);
+    }
 }
