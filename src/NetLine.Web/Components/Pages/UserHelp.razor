@@ -3,182 +3,182 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-<PageTitle>Pomoc – słownik metryk</PageTitle>
+<PageTitle>Help – metrics glossary</PageTitle>
 
 <div class="container py-3">
-    <h1 class="mb-3"><i class="bi bi-question-circle text-purple" aria-hidden="true"></i> Pomoc – słownik metryk</h1>
+    <h1 class="mb-3"><i class="bi bi-question-circle text-purple" aria-hidden="true"></i> Help – metrics glossary</h1>
     <p class="lead">
-        Na tej stronie znajdziesz wyjaśnienia wszystkich wartości, które NetLine pobiera z Twoich urządzeń.
-        Przy każdej metryce w tabelach wyników znajduje się ikona <i class="bi bi-info-circle" aria-hidden="true"></i>
-        prowadząca bezpośrednio do opisu w tym słowniczku.
+        This page explains every value that NetLine collects from your devices.
+        Next to each metric in the results tables you will find an
+        <i class="bi bi-info-circle" aria-hidden="true"></i> icon that links straight to the matching entry below.
     </p>
 
-    <nav aria-label="Spis treści" class="card shadow-sm my-4">
+    <nav aria-label="Table of contents" class="card shadow-sm my-4">
         <div class="card-body">
-            <h2 class="h5 mb-3">Spis treści</h2>
+            <h2 class="h5 mb-3">Table of contents</h2>
             <ul class="list-unstyled mb-0">
-                <li><a href="#kategoria-ping">Dostępność (Ping)</a></li>
+                <li><a href="#kategoria-ping">Availability (Ping)</a></li>
                 <li><a href="#kategoria-dns">DNS</a></li>
-                <li><a href="#kategoria-port">Porty sieciowe</a></li>
-                <li><a href="#kategoria-net-if">Interfejsy sieciowe</a></li>
+                <li><a href="#kategoria-port">Network ports</a></li>
+                <li><a href="#kategoria-net-if">Network interfaces</a></li>
                 <li><a href="#kategoria-cpu">CPU</a></li>
-                <li><a href="#kategoria-memory">Pamięć</a></li>
+                <li><a href="#kategoria-memory">Memory</a></li>
                 <li><a href="#kategoria-system">System</a></li>
-                <li><a href="#kategoria-raw-log">Dziennik zdarzeń (Syslog)</a></li>
+                <li><a href="#kategoria-raw-log">Event log (Syslog)</a></li>
             </ul>
         </div>
     </nav>
 
     <section id="kategoria-ping" class="mb-5">
-        <h2 class="text-purple"><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Dostępność (Ping)</h2>
+        <h2 class="text-purple"><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Availability (Ping)</h2>
         <p class="text-muted">
-            NetLine wysyła do urządzenia 4 pakiety ICMP („ping") i mierzy, ile z nich wróciło oraz w jakim czasie.
-            Dzięki temu wiadomo, czy urządzenie odpowiada i jak stabilne jest połączenie.
+            NetLine sends 4 ICMP packets („ping") to the device and measures how many came back and how quickly.
+            This tells you whether the device is responding and how stable the connection is.
         </p>
 
         <section id="ping-reachable" class="mt-3">
-            <h3 class="h5">Urządzenie dostępne <code>ping.reachable</code></h3>
-            <p>Informacja, czy urządzenie w ogóle odpowiedziało na ping (<strong>true</strong> = odpowiada, <strong>false</strong> = brak odpowiedzi).</p>
-            <p class="text-muted small">Wartość <em>false</em> zwykle oznacza: urządzenie jest wyłączone, odcięte od sieci lub blokuje pingi na firewallu.</p>
+            <h3 class="h5">Device reachable <code>ping.reachable</code></h3>
+            <p>Whether the device responded to ping at all (<strong>true</strong> = responding, <strong>false</strong> = no response).</p>
+            <p class="text-muted small"><em>false</em> usually means: the device is powered off, disconnected from the network, or blocking pings at the firewall.</p>
         </section>
 
         <section id="ping-failed" class="mt-3">
-            <h3 class="h5">Nieudane próby ping <code>ping.failed</code></h3>
-            <p>Liczba pakietów ICMP (z 4 wysłanych), na które nie otrzymano odpowiedzi.</p>
-            <p class="text-muted small">0 = idealnie; 1–2 = przejściowe zakłócenia; 3–4 = poważny problem z łącznością.</p>
+            <h3 class="h5">Failed ping probes <code>ping.failed</code></h3>
+            <p>Number of ICMP packets (out of 4 sent) that received no reply.</p>
+            <p class="text-muted small">0 = perfect; 1–2 = transient disturbance; 3–4 = serious connectivity problem.</p>
         </section>
 
         <section id="ping-loss-pct" class="mt-3">
-            <h3 class="h5">Utrata pakietów <code>ping.loss_pct</code></h3>
-            <p>Procent pakietów, które „zgubiły się" po drodze i nie wróciły do NetLine.</p>
-            <p class="text-muted small">0% = idealnie; 1–5% = zauważalne zakłócenia (np. przerywane rozmowy VoIP); powyżej 5% = połączenie niestabilne.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/Utrata_pakiet%C3%B3w" target="_blank" rel="noopener">Dowiedz się więcej <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">Packet loss <code>ping.loss_pct</code></h3>
+            <p>Percentage of packets that were „lost" on the way and did not come back to NetLine.</p>
+            <p class="text-muted small">0% = perfect; 1–5% = noticeable disturbance (e.g. choppy VoIP calls); above 5% = unstable connection.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Packet_loss" target="_blank" rel="noopener">Learn more <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
 
         <section id="ping-rtt-avg-ms" class="mt-3">
-            <h3 class="h5">Średni czas odpowiedzi <code>ping.rtt_avg_ms</code></h3>
-            <p>Uśredniony czas (w milisekundach), po którym urządzenie odpowiedziało na ping – tzw. RTT (<em>round-trip time</em>).</p>
-            <p class="text-muted small">&lt;20 ms = świetnie (sieć lokalna); 20–100 ms = dobrze (typowy internet); 100–300 ms = odczuwalne opóźnienie; &gt;300 ms = duża zwłoka, problemy np. w grach lub wideokonferencjach.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/Round-trip_time" target="_blank" rel="noopener">Dowiedz się więcej <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">Average response time <code>ping.rtt_avg_ms</code></h3>
+            <p>Average time (in milliseconds) it took the device to reply – the round-trip time (RTT).</p>
+            <p class="text-muted small">&lt;20 ms = excellent (local network); 20–100 ms = good (typical internet); 100–300 ms = noticeable latency; &gt;300 ms = high delay, causing problems e.g. in games or video calls.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Round-trip_delay" target="_blank" rel="noopener">Learn more <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
     </section>
 
     <section id="kategoria-dns" class="mb-5">
         <h2 class="text-purple"><i class="bi bi-signpost-split" aria-hidden="true"></i> DNS</h2>
         <p class="text-muted">
-            DNS zamienia adresy IP (np. 192.168.1.1) na czytelne nazwy (np. router.biuro.local) i odwrotnie.
-            NetLine sprawdza, czy dla adresu urządzenia da się uzyskać taką nazwę.
+            DNS translates IP addresses (e.g. 192.168.1.1) into human-readable names (e.g. router.office.local) and vice versa.
+            NetLine checks whether a name can be obtained for the device's address.
         </p>
 
         <section id="dns-resolved" class="mt-3">
-            <h3 class="h5">Nazwa znaleziona w DNS <code>dns.resolved</code></h3>
-            <p><strong>true</strong> oznacza, że serwer DNS zwrócił nazwę dla tego adresu. <strong>false</strong> – że adres nie ma zarejestrowanej nazwy albo serwer DNS nie odpowiedział.</p>
+            <h3 class="h5">Name resolved in DNS <code>dns.resolved</code></h3>
+            <p><strong>true</strong> means the DNS server returned a name for this address. <strong>false</strong> means the address has no registered name, or the DNS server did not respond.</p>
         </section>
 
         <section id="dns-hostname" class="mt-3">
-            <h3 class="h5">Nazwa hosta <code>dns.hostname</code></h3>
-            <p>Nazwa przypisana urządzeniu w DNS (tzw. reverse DNS). Pomaga szybciej rozpoznać, czym jest dany adres IP.</p>
+            <h3 class="h5">Host name <code>dns.hostname</code></h3>
+            <p>Name assigned to the device in DNS (reverse DNS lookup). It helps to quickly recognise what a given IP address is.</p>
         </section>
 
         <section id="dns-response-ms" class="mt-3">
-            <h3 class="h5">Czas odpowiedzi DNS <code>dns.response_ms</code></h3>
-            <p>Czas (w ms), jakiego serwer DNS potrzebował na odpowiedź.</p>
-            <p class="text-muted small">&lt;50 ms = szybko; 50–200 ms = akceptowalnie; &gt;200 ms = serwer DNS jest przeciążony lub daleko.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/Domain_Name_System" target="_blank" rel="noopener">Dowiedz się więcej <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">DNS response time <code>dns.response_ms</code></h3>
+            <p>Time (in ms) the DNS server needed to answer.</p>
+            <p class="text-muted small">&lt;50 ms = fast; 50–200 ms = acceptable; &gt;200 ms = the DNS server is overloaded or far away.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Domain_Name_System" target="_blank" rel="noopener">Learn more <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
     </section>
 
     <section id="kategoria-port" class="mb-5">
-        <h2 class="text-purple"><i class="bi bi-door-open" aria-hidden="true"></i> Porty sieciowe</h2>
+        <h2 class="text-purple"><i class="bi bi-door-open" aria-hidden="true"></i> Network ports</h2>
         <p class="text-muted">
-            Port to numer, pod którym urządzenie udostępnia konkretną usługę (np. stronę WWW, zdalny pulpit).
-            NetLine sprawdza, czy pod znanymi portami urządzenie odpowiada (port „otwarty") czy nie („zamknięty").
+            A port is a number under which the device exposes a specific service (e.g. a web page, remote desktop).
+            NetLine checks whether the device answers on well-known ports (port „open") or not („closed").
         </p>
 
         <section id="port-open" class="mt-3">
-            <h3 class="h5">Stan pojedynczego portu <code>port.&lt;numer&gt;.open</code></h3>
-            <p><strong>true</strong> = port jest otwarty i usługa za nim nasłuchuje. <strong>false</strong> = port nie odpowiada.</p>
-            <p class="text-muted small">Otwarte porty nie są same w sobie złe – ale <em>niespodziewanie</em> otwarty port (np. Telnet na firmowym routerze) może być luką bezpieczeństwa.</p>
+            <h3 class="h5">Single port state <code>port.&lt;number&gt;.open</code></h3>
+            <p><strong>true</strong> = the port is open and a service is listening behind it. <strong>false</strong> = the port is not responding.</p>
+            <p class="text-muted small">Open ports are not bad by themselves – but an <em>unexpectedly</em> open port (e.g. Telnet on a company router) can be a security hole.</p>
 
-            <h4 class="h6 mt-3">Skanowane porty i usługi</h4>
+            <h4 class="h6 mt-3">Scanned ports and services</h4>
             <div class="table-responsive">
                 <table class="table table-sm table-striped">
                     <thead>
-                        <tr><th>Port</th><th>Usługa</th><th>Do czego służy</th></tr>
+                        <tr><th>Port</th><th>Service</th><th>Purpose</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>21</td><td>FTP</td><td>Przesyłanie plików (stary, nieszyfrowany protokół)</td></tr>
-                        <tr><td>22</td><td>SSH</td><td>Bezpieczny zdalny dostęp do konsoli</td></tr>
-                        <tr><td>23</td><td>Telnet</td><td>Zdalny dostęp bez szyfrowania – odradzany</td></tr>
-                        <tr><td>25</td><td>SMTP</td><td>Wysyłanie poczty e-mail</td></tr>
-                        <tr><td>53</td><td>DNS</td><td>Serwer nazw</td></tr>
-                        <tr><td>80</td><td>HTTP</td><td>Strony WWW (nieszyfrowane)</td></tr>
-                        <tr><td>110</td><td>POP3</td><td>Odbieranie poczty e-mail</td></tr>
-                        <tr><td>139</td><td>NetBIOS</td><td>Udostępnianie plików w sieci Windows (stara wersja)</td></tr>
-                        <tr><td>143</td><td>IMAP</td><td>Odbieranie poczty e-mail (nowszy standard)</td></tr>
-                        <tr><td>443</td><td>HTTPS</td><td>Strony WWW (szyfrowane)</td></tr>
-                        <tr><td>445</td><td>SMB</td><td>Udostępnianie plików w sieci Windows</td></tr>
-                        <tr><td>3306</td><td>MySQL</td><td>Baza danych MySQL/MariaDB</td></tr>
-                        <tr><td>3389</td><td>RDP</td><td>Pulpit zdalny Windows</td></tr>
-                        <tr><td>5432</td><td>PostgreSQL</td><td>Baza danych PostgreSQL</td></tr>
-                        <tr><td>8080</td><td>HTTP-Alt</td><td>Alternatywny port WWW (często panele administracyjne)</td></tr>
+                        <tr><td>21</td><td>FTP</td><td>File transfer (old, unencrypted protocol)</td></tr>
+                        <tr><td>22</td><td>SSH</td><td>Secure remote shell access</td></tr>
+                        <tr><td>23</td><td>Telnet</td><td>Unencrypted remote access – discouraged</td></tr>
+                        <tr><td>25</td><td>SMTP</td><td>Sending e-mail</td></tr>
+                        <tr><td>53</td><td>DNS</td><td>Name server</td></tr>
+                        <tr><td>80</td><td>HTTP</td><td>Web pages (unencrypted)</td></tr>
+                        <tr><td>110</td><td>POP3</td><td>Receiving e-mail</td></tr>
+                        <tr><td>139</td><td>NetBIOS</td><td>Windows file sharing (legacy)</td></tr>
+                        <tr><td>143</td><td>IMAP</td><td>Receiving e-mail (newer standard)</td></tr>
+                        <tr><td>443</td><td>HTTPS</td><td>Web pages (encrypted)</td></tr>
+                        <tr><td>445</td><td>SMB</td><td>Windows file sharing</td></tr>
+                        <tr><td>3306</td><td>MySQL</td><td>MySQL/MariaDB database</td></tr>
+                        <tr><td>3389</td><td>RDP</td><td>Windows remote desktop</td></tr>
+                        <tr><td>5432</td><td>PostgreSQL</td><td>PostgreSQL database</td></tr>
+                        <tr><td>8080</td><td>HTTP-Alt</td><td>Alternative web port (often admin panels)</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p><a href="https://pl.wikipedia.org/wiki/Port_protoko%C5%82u" target="_blank" rel="noopener">Dowiedz się więcej o portach <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <p><a href="https://en.wikipedia.org/wiki/Port_(computer_networking)" target="_blank" rel="noopener">Learn more about ports <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
 
         <section id="port-open-count" class="mt-3">
-            <h3 class="h5">Liczba otwartych portów <code>port.open_count</code></h3>
-            <p>Sumaryczna liczba portów (ze skanowanej listy), które są otwarte na tym urządzeniu.</p>
-            <p class="text-muted small">Gwałtowny wzrost tej liczby między skanami warto sprawdzić – może oznaczać nową, nieautoryzowaną usługę.</p>
+            <h3 class="h5">Number of open ports <code>port.open_count</code></h3>
+            <p>Total number of ports (from the scanned list) that are open on this device.</p>
+            <p class="text-muted small">A sudden increase between scans is worth investigating – it may indicate a new, unauthorised service.</p>
         </section>
     </section>
 
     <section id="kategoria-net-if" class="mb-5">
-        <h2 class="text-purple"><i class="bi bi-ethernet" aria-hidden="true"></i> Interfejsy sieciowe</h2>
+        <h2 class="text-purple"><i class="bi bi-ethernet" aria-hidden="true"></i> Network interfaces</h2>
         <p class="text-muted">
-            Interfejs sieciowy to „port" urządzenia, przez który łączy się ono z siecią (np. karta LAN, WiFi, port światłowodowy).
-            Każdy interfejs ma swój numer (indeks SNMP) – w kluczach metryk to <code>&lt;idx&gt;</code>, np. <code>net.if.3.download_bps</code>.
+            A network interface is a „port" through which the device connects to the network (e.g. LAN card, WiFi, fibre port).
+            Each interface has its own number (SNMP index) – in metric keys it is <code>&lt;idx&gt;</code>, e.g. <code>net.if.3.download_bps</code>.
         </p>
 
         <section id="net-if-oper-status" class="mt-3">
-            <h3 class="h5">Stan interfejsu <code>net.if.&lt;idx&gt;.oper_status</code></h3>
-            <p>Aktualny stan pracy interfejsu. Możliwe wartości:</p>
+            <h3 class="h5">Interface state <code>net.if.&lt;idx&gt;.oper_status</code></h3>
+            <p>Current operational state of the interface. Possible values:</p>
             <ul>
-                <li><strong>up</strong> – działa poprawnie, przesyła dane,</li>
-                <li><strong>down</strong> – nieaktywny (brak kabla, wyłączony, awaria),</li>
-                <li><strong>testing</strong> – w trybie diagnostycznym,</li>
-                <li><strong>dormant</strong> – gotowy, czeka na nawiązanie połączenia,</li>
-                <li><strong>unknown</strong> – stan nieznany urządzeniu.</li>
+                <li><strong>up</strong> – working correctly, passing traffic,</li>
+                <li><strong>down</strong> – inactive (no cable, disabled, fault),</li>
+                <li><strong>testing</strong> – in diagnostic mode,</li>
+                <li><strong>dormant</strong> – ready, waiting for a connection,</li>
+                <li><strong>unknown</strong> – the device does not know its state.</li>
             </ul>
         </section>
 
         <section id="net-if-download-bps" class="mt-3">
-            <h3 class="h5">Prędkość pobierania <code>net.if.&lt;idx&gt;.download_bps</code></h3>
-            <p>Ilość danych odbieranych przez interfejs w bitach na sekundę (bps). 1 Mb/s = 1 000 000 bps.</p>
-            <p class="text-muted small">Wartość tuż przy maksymalnej przepustowości łącza i utrzymująca się długo = łącze jest nasycone (może spowalniać wszystkich użytkowników).</p>
+            <h3 class="h5">Download speed <code>net.if.&lt;idx&gt;.download_bps</code></h3>
+            <p>Amount of data received by the interface in bits per second (bps). 1 Mb/s = 1,000,000 bps.</p>
+            <p class="text-muted small">Values near the maximum link bandwidth sustained for a long time = the link is saturated (which may slow down all users).</p>
         </section>
 
         <section id="net-if-upload-bps" class="mt-3">
-            <h3 class="h5">Prędkość wysyłania <code>net.if.&lt;idx&gt;.upload_bps</code></h3>
-            <p>Ilość danych wysyłanych przez interfejs w bitach na sekundę.</p>
-            <p class="text-muted small">Niespodziewanie wysoki upload w nocy może świadczyć np. o backupach albo – w gorszym scenariuszu – o wycieku danych.</p>
+            <h3 class="h5">Upload speed <code>net.if.&lt;idx&gt;.upload_bps</code></h3>
+            <p>Amount of data sent by the interface in bits per second.</p>
+            <p class="text-muted small">Unexpectedly high upload at night may simply be backups – or, in a worse case, a data leak.</p>
         </section>
 
         <section id="net-if-total" class="mt-3">
-            <h3 class="h5">Liczba interfejsów <code>net.if.total</code></h3>
-            <p>Ile łącznie interfejsów sieciowych wykryto na urządzeniu.</p>
+            <h3 class="h5">Number of interfaces <code>net.if.total</code></h3>
+            <p>Total number of network interfaces detected on the device.</p>
         </section>
 
         <section id="net-if-up" class="mt-3">
-            <h3 class="h5">Interfejsy aktywne <code>net.if.up</code></h3>
-            <p>Ile interfejsów jest w stanie <em>up</em> (aktywnie pracuje).</p>
+            <h3 class="h5">Active interfaces <code>net.if.up</code></h3>
+            <p>How many interfaces are in the <em>up</em> state (actively working).</p>
         </section>
 
         <section id="net-if-down" class="mt-3">
-            <h3 class="h5">Interfejsy nieaktywne <code>net.if.down</code></h3>
-            <p>Ile interfejsów jest w stanie <em>down</em>. Część z nich to może być stan normalny (nieużywane porty), ale nagły wzrost warto zbadać.</p>
+            <h3 class="h5">Inactive interfaces <code>net.if.down</code></h3>
+            <p>How many interfaces are in the <em>down</em> state. Some of them may legitimately be unused ports, but a sudden increase is worth investigating.</p>
         </section>
     </section>
 
@@ -186,121 +186,121 @@
         <h2 class="text-purple"><i class="bi bi-cpu" aria-hidden="true"></i> CPU</h2>
 
         <section id="cpu-usage-avg" class="mt-3">
-            <h3 class="h5">Średnie obciążenie procesora <code>cpu.usage_avg</code></h3>
-            <p>Procent czasu, przez jaki procesor urządzenia był zajęty (uśredniony ze wszystkich rdzeni).</p>
-            <p class="text-muted small">&lt;50% = spokojnie; 50–80% = umiarkowane obciążenie; &gt;80% przez dłuższy czas = urządzenie może nie nadążać i odpowiadać wolno.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/Procesor" target="_blank" rel="noopener">Dowiedz się więcej <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">Average processor load <code>cpu.usage_avg</code></h3>
+            <p>Percentage of time the device's processor was busy (averaged across all cores).</p>
+            <p class="text-muted small">&lt;50% = calm; 50–80% = moderate load; &gt;80% sustained = the device may struggle and respond slowly.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Central_processing_unit" target="_blank" rel="noopener">Learn more <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
     </section>
 
     <section id="kategoria-memory" class="mb-5">
-        <h2 class="text-purple"><i class="bi bi-memory" aria-hidden="true"></i> Pamięć</h2>
+        <h2 class="text-purple"><i class="bi bi-memory" aria-hidden="true"></i> Memory</h2>
 
         <section id="memory-total-mb" class="mt-3">
-            <h3 class="h5">Całkowita pamięć RAM <code>memory.total_mb</code></h3>
-            <p>Ile megabajtów pamięci operacyjnej (RAM) urządzenie posiada w sumie.</p>
+            <h3 class="h5">Total RAM <code>memory.total_mb</code></h3>
+            <p>How many megabytes of RAM the device has in total.</p>
         </section>
 
         <section id="memory-free-mb" class="mt-3">
-            <h3 class="h5">Wolna pamięć RAM <code>memory.free_mb</code></h3>
-            <p>Ile megabajtów RAM nie jest aktualnie używane.</p>
-            <p class="text-muted small">Bardzo mała wolna pamięć zmusza urządzenie do korzystania z dysku (swap), co znacząco spowalnia pracę.</p>
+            <h3 class="h5">Free RAM <code>memory.free_mb</code></h3>
+            <p>How many megabytes of RAM are currently unused.</p>
+            <p class="text-muted small">Very low free memory forces the device to use the disk (swap), which significantly slows down operation.</p>
         </section>
 
         <section id="memory-usage-pct" class="mt-3">
-            <h3 class="h5">Wykorzystanie pamięci RAM <code>memory.usage_pct</code></h3>
-            <p>Procent zajętej pamięci RAM.</p>
-            <p class="text-muted small">&lt;70% = w porządku; 70–90% = warto obserwować; &gt;90% długotrwale = urządzenie może działać niestabilnie.</p>
+            <h3 class="h5">RAM usage <code>memory.usage_pct</code></h3>
+            <p>Percentage of RAM in use.</p>
+            <p class="text-muted small">&lt;70% = fine; 70–90% = worth watching; &gt;90% sustained = the device may become unstable.</p>
         </section>
     </section>
 
     <section id="kategoria-system" class="mb-5">
         <h2 class="text-purple"><i class="bi bi-pc-display" aria-hidden="true"></i> System</h2>
-        <p class="text-muted">Podstawowe informacje o urządzeniu pobrane przez SNMP.</p>
+        <p class="text-muted">Basic information about the device obtained via SNMP.</p>
 
         <section id="system-descr" class="mt-3">
-            <h3 class="h5">Opis systemu <code>system.descr</code></h3>
-            <p>Pełny opis urządzenia zwrócony przez SNMP – zwykle nazwa systemu, producent i wersja firmware.</p>
+            <h3 class="h5">System description <code>system.descr</code></h3>
+            <p>Full description of the device returned by SNMP – usually OS name, vendor and firmware version.</p>
         </section>
 
         <section id="system-name" class="mt-3">
-            <h3 class="h5">Nazwa SNMP <code>system.name</code></h3>
-            <p>Nazwa hosta skonfigurowana w samym urządzeniu (sysName).</p>
+            <h3 class="h5">SNMP name <code>system.name</code></h3>
+            <p>Host name configured on the device itself (sysName).</p>
         </section>
 
         <section id="system-location" class="mt-3">
-            <h3 class="h5">Lokalizacja <code>system.location</code></h3>
-            <p>Pole sysLocation – administrator wpisuje tu fizyczne umiejscowienie urządzenia (np. „Serwerownia, szafa A3").</p>
+            <h3 class="h5">Location <code>system.location</code></h3>
+            <p>The sysLocation field – the administrator records the physical location of the device here (e.g. „Server room, rack A3").</p>
         </section>
 
         <section id="system-contact" class="mt-3">
-            <h3 class="h5">Kontakt <code>system.contact</code></h3>
-            <p>Pole sysContact – osoba/zespół odpowiedzialny za urządzenie (np. adres e-mail administratora).</p>
+            <h3 class="h5">Contact <code>system.contact</code></h3>
+            <p>The sysContact field – person/team responsible for the device (e.g. administrator's e-mail).</p>
         </section>
 
         <section id="system-uptime" class="mt-3">
-            <h3 class="h5">Czas działania <code>system.uptime</code></h3>
-            <p>Jak długo urządzenie pracuje od ostatniego uruchomienia. Nagły spadek do zera = urządzenie się zrestartowało.</p>
+            <h3 class="h5">Uptime <code>system.uptime</code></h3>
+            <p>How long the device has been running since the last boot. A sudden drop to zero = the device has rebooted.</p>
         </section>
 
         <section id="system-os-family" class="mt-3">
-            <h3 class="h5">Rodzina systemu <code>system.os_family</code></h3>
-            <p>Ogólny typ systemu wykryty na podstawie opisu SNMP: Windows, Linux, macOS, FreeBSD, Cisco IOS, RouterOS itd.</p>
+            <h3 class="h5">OS family <code>system.os_family</code></h3>
+            <p>General OS type detected from the SNMP description: Windows, Linux, macOS, FreeBSD, Cisco IOS, RouterOS, etc.</p>
         </section>
 
         <section id="system-os-version" class="mt-3">
-            <h3 class="h5">Wersja systemu <code>system.os_version</code></h3>
-            <p>Wersja systemu operacyjnego lub firmware, jeśli udało się ją rozpoznać.</p>
+            <h3 class="h5">OS version <code>system.os_version</code></h3>
+            <p>Operating system or firmware version, if it could be identified.</p>
         </section>
 
         <section id="system-users" class="mt-3">
-            <h3 class="h5">Zalogowani użytkownicy <code>system.users</code></h3>
-            <p>Liczba użytkowników aktualnie zalogowanych na urządzeniu.</p>
+            <h3 class="h5">Logged-in users <code>system.users</code></h3>
+            <p>Number of users currently logged into the device.</p>
         </section>
 
         <section id="system-processes" class="mt-3">
-            <h3 class="h5">Liczba procesów <code>system.processes</code></h3>
-            <p>Liczba działających procesów (uruchomionych programów) w systemie.</p>
+            <h3 class="h5">Number of processes <code>system.processes</code></h3>
+            <p>Number of running processes (started programs) in the system.</p>
         </section>
 
         <section id="system-load-1" class="mt-3">
-            <h3 class="h5">Obciążenie 1 min <code>system.load_1</code></h3>
-            <p>Średnie obciążenie systemu z ostatniej minuty (Linux/Unix load average).</p>
-            <p class="text-muted small">W uproszczeniu: wartość ≈ liczbie rdzeni = pełne wykorzystanie; powyżej = procesy czekają w kolejce.</p>
+            <h3 class="h5">Load 1 min <code>system.load_1</code></h3>
+            <p>Average system load over the last minute (Linux/Unix load average).</p>
+            <p class="text-muted small">Roughly: a value ≈ number of cores means full utilisation; above that, processes are waiting in the queue.</p>
         </section>
 
         <section id="system-load-5" class="mt-3">
-            <h3 class="h5">Obciążenie 5 min <code>system.load_5</code></h3>
-            <p>Średnie obciążenie systemu z ostatnich 5 minut – pokazuje trend.</p>
+            <h3 class="h5">Load 5 min <code>system.load_5</code></h3>
+            <p>Average system load over the last 5 minutes – shows the trend.</p>
         </section>
 
         <section id="system-load-15" class="mt-3">
-            <h3 class="h5">Obciążenie 15 min <code>system.load_15</code></h3>
-            <p>Średnie obciążenie z ostatnich 15 minut. Jeśli rośnie, obciążenie narasta; jeśli maleje – ustępuje.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/%C5%9Arednie_obci%C4%85%C5%BCenie" target="_blank" rel="noopener">Dowiedz się więcej o load average <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">Load 15 min <code>system.load_15</code></h3>
+            <p>Average load over the last 15 minutes. Rising = load is building up; falling = it is easing off.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Load_(computing)" target="_blank" rel="noopener">Learn more about load average <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
     </section>
 
     <section id="kategoria-raw-log" class="mb-5">
-        <h2 class="text-purple"><i class="bi bi-journal-text" aria-hidden="true"></i> Dziennik zdarzeń (Syslog)</h2>
+        <h2 class="text-purple"><i class="bi bi-journal-text" aria-hidden="true"></i> Event log (Syslog)</h2>
         <p class="text-muted">
-            Urządzenia sieciowe prowadzą własny dziennik zdarzeń (syslog) – zapisują tam m.in. logowania,
-            zmiany konfiguracji, błędy. NetLine może przechowywać ostatnie zebrane linie.
+            Network devices keep their own event log (syslog) – it records, among other things, logins,
+            configuration changes, and errors. NetLine can store the most recently collected lines.
         </p>
 
         <section id="raw-log-count" class="mt-3">
-            <h3 class="h5">Liczba linii logu <code>raw.log.count</code></h3>
-            <p>Ile linii dziennika zostało pobranych podczas ostatniego skanu.</p>
+            <h3 class="h5">Number of log lines <code>raw.log.count</code></h3>
+            <p>How many log lines were collected during the last scan.</p>
         </section>
 
         <section id="raw-log" class="mt-3">
-            <h3 class="h5">Pojedyncza linia logu <code>raw.log.&lt;i&gt;</code></h3>
-            <p>Surowa treść jednej linii dziennika, tak jak zapisało ją urządzenie. <code>&lt;i&gt;</code> to numer porządkowy linii.</p>
-            <p><a href="https://pl.wikipedia.org/wiki/Syslog" target="_blank" rel="noopener">Dowiedz się więcej o Syslog <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
+            <h3 class="h5">Single log line <code>raw.log.&lt;i&gt;</code></h3>
+            <p>Raw content of a single log line, exactly as written by the device. <code>&lt;i&gt;</code> is the ordinal number of the line.</p>
+            <p><a href="https://en.wikipedia.org/wiki/Syslog" target="_blank" rel="noopener">Learn more about Syslog <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></p>
         </section>
     </section>
 
     <p class="text-muted small mt-5">
-        Nie znalazłeś metryki, której szukasz? Skontaktuj się z administratorem NetLine – być może została dodana już po wydaniu tej wersji słowniczka.
+        Can't find the metric you're looking for? Contact your NetLine administrator – it may have been added after this glossary was released.
     </p>
 </div>
