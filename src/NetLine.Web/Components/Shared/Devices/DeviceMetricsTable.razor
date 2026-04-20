@@ -13,23 +13,14 @@ else
                 <th class="text-muted small label-col">Etykieta</th>
                 <th class="text-muted small">Wartość</th>
                 <th class="text-muted small">Czas</th>
+                <th class="text-muted small">Info</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var m in Metrics)
             {
                 <tr>
-                    <td>
-                        <code>@m.MetricKey</code>
-                        <a href="@HelpAnchor(m.MetricKey)"
-                           target="_blank"
-                           rel="noopener"
-                           class="ms-1 text-muted text-decoration-none"
-                           title="Co to znaczy?"
-                           aria-label="Pomoc dla metryki @m.MetricKey">
-                            <i class="bi bi-info-circle" aria-hidden="true"></i>
-                        </a>
-                    </td>
+                    <td><code>@m.MetricKey</code></td>
                     <td>@(m.Label ?? "")</td>
                     <td>
                         @if (m.NumericValue.HasValue)
@@ -46,6 +37,14 @@ else
                         }
                     </td>
                     <td class="text-muted small">@m.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                    <td>
+                        <a href="@HelpAnchor(m.MetricKey)"
+                           target="_blank"
+                           rel="noopener"
+                           aria-label="Read more about @m.MetricKey">
+                            Read more <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                        </a>
+                    </td>
                 </tr>
             }
         </tbody>
