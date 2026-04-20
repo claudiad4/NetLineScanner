@@ -16,8 +16,8 @@ else
                                          Name="Ping [ms]"
                                          Items="Dashboard.PingLatencyHistory"
                                          SeriesType="SeriesType.Line"
-                                         XValue="point => point.Timestamp"
-                                         YValue="point => point.ValueMs" />
+                                         XValue="@(point => point.Timestamp)"
+                                         YAggregate="@(point => point.ValueMs)" />
                     </ApexChart>
                 </div>
             </div>
@@ -32,8 +32,8 @@ else
                                          Name="Alerty"
                                          Items="alertReadSeries"
                                          SeriesType="SeriesType.Donut"
-                                         XValue="item => item.AlertType"
-                                         YValue="item => item.Count" />
+                                         XValue="@(item => item.AlertType)"
+                                         YAggregate="@(item => item.Count)" />
                     </ApexChart>
                 </div>
             </div>
@@ -48,8 +48,8 @@ else
                                          Name="Ilość"
                                          Items="Dashboard.AlertTypes"
                                          SeriesType="SeriesType.Bar"
-                                         XValue="item => item.AlertType"
-                                         YValue="item => item.Count" />
+                                         XValue="@(item => item.AlertType)"
+                                         YAggregate="@(item => item.Count)" />
                     </ApexChart>
                 </div>
             </div>
