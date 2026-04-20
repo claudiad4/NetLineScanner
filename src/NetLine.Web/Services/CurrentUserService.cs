@@ -13,7 +13,8 @@ public class CurrentUserService(
     AuthenticationStateProvider authStateProvider,
     UserManager<AppUser> userManager)
 {
-    public const string AdminRole = IdentitySeeder.AdminRole;
+    public const string GlobalAdminRole = IdentitySeeder.GlobalAdminRole;
+    public const string OfficeAdminRole = IdentitySeeder.OfficeAdminRole;
     public const string UserRole = IdentitySeeder.UserRole;
 
     public async Task<CurrentUserInfo?> GetAsync()
@@ -27,19 +28,36 @@ public class CurrentUserService(
         if (user is null)
             return null;
 
-        var isAdmin = await userManager.IsInRoleAsync(user, AdminRole);
+        var isGlobalAdmin = await userManager.IsInRoleAsync(user, GlobalAdminRole);
+        var isOfficeAdmin = await userManager.IsInRoleAsync(user, OfficeAdminRole);
+
         return new CurrentUserInfo(
             user.Id,
             user.Email ?? "",
             user.OfficeId,
-            isAdmin);
+            isGlobalAdmin,
+            isOfficeAdmin);
     }
 
-    public async Task<bool> IsAdminAsync()
+    public async Task<bool> IsGlobalAdminAsync()
     {
         var info = await GetAsync();
-        return info?.IsAdmin == true;
+        return info?.IsGlobalAdmin == true;
+    }
+
+    public async Task<bool> IsOfficeAdminAsync()
+    {
+        var info = await GetAsync();
+        return info?.IsOfficeAdmin == true;
     }
 }
 
-public record CurrentUserInfo(string Id, string Email, int? OfficeId, bool IsAdmin);
+public record CurrentUserInfo(
+    string Id,
+    string Email,
+    int? OfficeId,
+    bool IsGlobalAdmin,
+    bool IsOfficeAdmin)
+{
+    public bool IsAdmin => IsGlobalAdmin || IsOfficeAdmin;
+}
