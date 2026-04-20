@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using NetLine.Application.DTO.Dashboards;
 using NetLine.Domain.Entities;
 using NetLine.Web.Components.Shared.Offices;
 using NetLine.Web.Services;
@@ -19,6 +20,7 @@ public partial class OfficesDetails : ComponentBase, IAsyncDisposable
     private Office? office;
     private List<DeviceInfo>? devices;
     private List<DeviceAlert>? alerts;
+    private OfficeDashboardDto? dashboard;
     private int? expandedDeviceId;
 
     private bool showForm;
@@ -123,6 +125,7 @@ public partial class OfficesDetails : ComponentBase, IAsyncDisposable
             office = await OfficeClient.GetOfficeAsync(Id);
             devices = await DeviceClient.GetDevicesByOfficeAsync(Id);
             alerts = await AlertClient.GetAlertsAsync(officeId: Id, limit: 50);
+            dashboard = await OfficeClient.GetDashboardAsync(Id);
         }
         catch (Exception ex)
         {

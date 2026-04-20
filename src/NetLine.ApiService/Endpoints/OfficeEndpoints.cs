@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NetLine.Application.Interfaces.Dashboards;
 using NetLine.Domain.Entities;
 using NetLine.Infrastructure.Data;
 
@@ -24,6 +25,13 @@ public static class OfficeEndpoints
             return office is null ? Results.NotFound() : Results.Ok(office);
         })
         .WithName("GetOffice");
+
+        group.MapGet("/{id}/dashboard", async (int id, IOfficeDashboardService dashboardService, CancellationToken cancellationToken) =>
+        {
+            var dashboard = await dashboardService.GetOfficeDashboardAsync(id, cancellationToken);
+            return Results.Ok(dashboard);
+        })
+        .WithName("GetOfficeDashboard");
 
         group.MapPost("/", async (Office office, AppDbContext db) =>
         {

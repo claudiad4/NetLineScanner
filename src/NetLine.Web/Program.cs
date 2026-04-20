@@ -8,6 +8,7 @@ using NetLine.Infrastructure;
 using NetLine.Infrastructure.Data;
 using NetLine.Infrastructure.Identity;
 using NetLine.Web.Components.Account;
+using ApexCharts;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -16,6 +17,7 @@ builder.AddNpgsqlDbContext<AppDbContext>("NetLineDB");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddApexCharts();
 
 builder.Services.AddHttpClient<DeviceApiClient>(client =>
 {

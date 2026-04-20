@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using NetLine.Application.DTO.Dashboards;
 using NetLine.Web.Services;
 using NetLine.Domain.Entities;
 using NetLine.Web.Components.Shared.Devices;
@@ -24,6 +25,7 @@ namespace NetLine.Web.Components.Pages.Devices
         protected DeviceInfo? device;
         protected List<DeviceAlert> alerts = [];
         protected List<DeviceMetric> metrics = [];
+        protected DeviceDashboardDto? dashboard;
         protected CurrentUserInfo? user;
         protected bool isAdmin;
         protected bool accessDenied;
@@ -78,6 +80,7 @@ namespace NetLine.Web.Components.Pages.Devices
 
                 alerts = await AlertClient.GetAlertsAsync(deviceId: Id, limit: 50);
                 metrics = await ApiClient.GetLatestMetricsAsync(Id);
+                dashboard = await ApiClient.GetDashboardAsync(Id);
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NetLine.Application.Interfaces.Dashboards;
 using NetLine.Application.Interfaces.Devices;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
@@ -44,6 +45,13 @@ public static class DeviceEndpoints
             return Results.Ok(latest);
         })
         .WithName("GetDeviceLatestMetrics");
+
+        group.MapGet("/{id}/dashboard", async (int id, IDeviceDashboardService dashboardService, CancellationToken cancellationToken) =>
+        {
+            var dashboard = await dashboardService.GetDeviceDashboardAsync(id, cancellationToken);
+            return Results.Ok(dashboard);
+        })
+        .WithName("GetDeviceDashboard");
 
         group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
         {
