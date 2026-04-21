@@ -392,6 +392,8 @@ namespace NetLine.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("OfficeId");
+
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
