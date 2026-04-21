@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace NetLine.Domain.Entities;
+﻿namespace NetLine.Domain.Entities;
 
 public class Office
 {
@@ -12,6 +6,8 @@ public class Office
     public string Name { get; set; } = default!;
     public string? Location { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? AdminId { get; set; }
 
     public ICollection<DeviceInfo> Devices { get; set; } = [];
 }

@@ -55,10 +55,10 @@ public class CurrentUserService : ICurrentUserService
         var id = UserId;
         if (id is null) return Array.Empty<int>();
 
-        return await _db.OfficeAdminAssignments
+        return await _db.Offices
             .AsNoTracking()
-            .Where(a => a.UserId == id)
-            .Select(a => a.OfficeId)
+            .Where(o => o.AdminId == id)
+            .Select(o => o.Id)
             .ToListAsync(ct);
     }
 }
