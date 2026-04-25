@@ -1,3 +1,4 @@
+using NetLine.Application.Models.Scanning;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 
@@ -54,6 +55,9 @@ public class DeviceApiClient(HttpClient httpClient)
 
     public async Task<List<DeviceMetric>> GetLatestMetricsAsync(int id)
         => await httpClient.GetFromJsonAsync<List<DeviceMetric>>($"api/devices/{id}/metrics/latest") ?? [];
+
+    public async Task<List<DeviceScanSchedule>> GetScanScheduleAsync(int id)
+        => await httpClient.GetFromJsonAsync<List<DeviceScanSchedule>>($"api/devices/{id}/scan-schedule") ?? [];
 
     public async Task<bool> UpdateDeviceAsync(int id, string userDefinedName, string deviceType)
     {

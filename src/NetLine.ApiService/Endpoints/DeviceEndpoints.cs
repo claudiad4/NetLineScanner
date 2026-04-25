@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NetLine.Application.Interfaces.Devices;
+using NetLine.Application.Interfaces.Scanning;
 using NetLine.Domain.Entities;
 using NetLine.Domain.Models;
 using NetLine.Infrastructure.Data;
@@ -44,6 +45,15 @@ public static class DeviceEndpoints
             return Results.Ok(latest);
         })
         .WithName("GetDeviceLatestMetrics");
+
+        group.MapGet("/{id}/scan-schedule", async (int id, AppDbContext db, IScanScheduleQuery scheduleQuery) =>
+        {
+            var device = await db.DevicesInfo.FindAsync(id);
+            return device is null
+                ? Results.NotFound()
+                : Results.Ok(scheduleQuery.GetSchedule(device, DateTime.UtcNow));
+        })
+        .WithName("GetDeviceScanSchedule");
 
         group.MapPost("/", async (AddDeviceRequest request, IDeviceManager svc) =>
         {

@@ -59,6 +59,8 @@ builder.Services.AddSingleton<IMonitoringComponent, SyslogComponent>();
 
 // Scanning + status orchestration
 builder.Services.AddSingleton<IScanningPolicy, ScanningPolicy>();
+builder.Services.AddSingleton<IScanScheduleQuery>(sp =>
+    (ScanningPolicy)sp.GetRequiredService<IScanningPolicy>());
 builder.Services.AddScoped<IDeviceScanner, DeviceScanner>();
 builder.Services.AddScoped<IDeviceStatusService, DeviceStatusService>();
 builder.Services.AddScoped<IDeviceManager, DeviceManager>();

@@ -1,0 +1,54 @@
+@using NetLine.Application.Models.Scanning
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <strong>Następne skany</strong>
+    </div>
+    <div class="card-body p-0">
+        @if (Schedule.Count == 0)
+        {
+            <p class="text-muted m-3 mb-0">Brak zaplanowanych skanów.</p>
+        }
+        else
+        {
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Kategoria / Nazwa</th>
+                        <th>Tier</th>
+                        <th class="text-end">Następny skan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Schedule)
+                    {
+                        <tr>
+                            <td>
+                                <span class="text-muted">@row.Category</span>
+                                <span class="mx-1">/</span>
+                                <span class="fw-semibold">@row.ComponentName</span>
+                            </td>
+                            <td>
+                                <span class="badge @TierBadgeClass(row.Tier)">@row.Tier</span>
+                            </td>
+                            <td class="text-end font-monospace">
+                                @row.NextScanUtc.ToLocalTime().ToString("HH:mm:ss")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<DeviceScanSchedule> Schedule { get; set; } = [];
+
+    private static string TierBadgeClass(string tier) => tier switch
+    {
+        "Light" => "bg-success",
+        "Heavy" => "bg-secondary",
+        _ => "bg-warning text-dark",
+    };
+}

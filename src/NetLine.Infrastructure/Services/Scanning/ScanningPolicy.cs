@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NetLine.Application.Interfaces.Monitoring;
 using NetLine.Application.Interfaces.Scanning;
+using NetLine.Application.Models.Scanning;
 using NetLine.Domain.Entities;
 
 namespace NetLine.Infrastructure.Services.Scanning;
@@ -11,7 +12,7 @@ namespace NetLine.Infrastructure.Services.Scanning;
 /// (Light / Medium / Heavy) by its <see cref="IMonitoringComponent.Name"/>; a component is
 /// reported due when the tier interval has elapsed since its last recorded run for the device.
 /// </summary>
-public class ScanningPolicy : IScanningPolicy
+public class ScanningPolicy : IScanningPolicy, IScanScheduleQuery
 {
     private static readonly TimeSpan LightInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MediumInterval = TimeSpan.FromMinutes(15);
@@ -69,6 +70,41 @@ public class ScanningPolicy : IScanningPolicy
         {
             _lastRun[(deviceId, component.Name)] = utcNow;
         }
+    }
+
+    public IReadOnlyList<DeviceScanSchedule> GetSchedule(DeviceInfo device, DateTime utcNow)
+    {
+        var schedule = new List<DeviceScanSchedule>(_components.Count);
+        foreach (var component in _components)
+        {
+            var interval = IntervalFor(component.Name);
+            var nextScanUtc = _lastRun.TryGetValue((device.Id, component.Name), out var lastRun)
+                ? lastRun + interval
+                : utcNow;
+            var tier = TierLabelFor(component.Name);
+            schedule.Add(new DeviceScanSchedule(
+                component.Name,
+                component.Category,
+                tier,
+                nextScanUtc,
+                interval));
+        }
+        schedule.Sort((a, b) => a.NextScanUtc.CompareTo(b.NextScanUtc));
+        return schedule;
+    }
+
+    private static string TierLabelFor(string componentName)
+    {
+        if (TierByName.TryGetValue(componentName, out var tier))
+        {
+            return tier switch
+            {
+                ScanTier.Light => "Light",
+                ScanTier.Heavy => "Heavy",
+                _ => "Medium",
+            };
+        }
+        return "Medium";
     }
 
     private TimeSpan IntervalFor(string componentName)
